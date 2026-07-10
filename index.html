@@ -99,20 +99,20 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
   <div class="card">
     <h2>Semáforo por dependencia</h2>
     <div class="tablewrap"><table id="tSemaforo">
-      <thead><tr><th>Dependencia</th><th>Gerencia</th><th>Concesionario</th><th>Checks mes</th><th>Checks año</th><th>Último puntaje</th><th>Obs. abiertas</th><th>Obs. vencidas</th><th>Reclamos abiertos</th><th>Semáforo</th></tr></thead>
+      <thead><tr id="semHead"></tr></thead>
       <tbody></tbody>
     </table></div>
   </div>
 
   <div class="card" id="dropZone" style="transition:box-shadow .15s,border .15s;border:2px dashed transparent">
     <h2>Cargar check / email</h2>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><b>Arrastrá acá el PDF o el email (.eml)</b>, adjuntalo con el botón, o pegá el texto del mail. La IA identifica dependencia, gestor, puntaje y acciones, y lo carga al sistema.</p>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><b>Arrastrá acá el email guardado de Outlook (.msg), el PDF o el .eml</b>, adjuntalo con el botón, o pegá el texto del mail. La IA identifica dependencia, gestor, puntaje y acciones, y lo carga al sistema.</p>
     <input type="text" id="cargaAsunto" placeholder="Asunto del email (opcional, ej: US GARAYALDE - Check 25/06)" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px">
     <textarea id="cargaCuerpo" placeholder="Pegá acá el cuerpo del email (opcional si adjuntás el PDF)…" style="width:100%;min-height:100px;padding:10px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical"></textarea>
     <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
       <label style="background:#fff;border:1px dashed var(--navy2);color:var(--navy);padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;font-size:12.5px">
-        📎 Adjuntar PDF, email (.eml), Excel o foto
-        <input type="file" id="cargaPdf" accept="application/pdf,image/*,.eml,message/rfc822,.xlsx,.xls,.csv" multiple style="display:none">
+        📎 Adjuntar email de Outlook (.msg), PDF, .eml, Excel o foto
+        <input type="file" id="cargaPdf" accept="application/pdf,image/*,.eml,message/rfc822,.msg,.xlsx,.xls,.csv" multiple style="display:none">
       </label>
       <span id="cargaPdfInfo" style="font-size:12px;color:var(--muted)"></span>
       <button id="btnCargar" style="background:var(--navy);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">Procesar con IA</button>
@@ -148,6 +148,40 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
   </div>
 
   <div class="card">
+    <h2>📘 Guía del Gestor de Calidad</h2>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Estándar de trabajo del equipo. El Perfil de Gestores y el Análisis IA de este tablero miden el cumplimiento de esta guía con los datos que se van cargando.</p>
+    <style>details.gg{border:1px solid #E4EAF3;border-radius:8px;margin-bottom:8px;padding:0}details.gg summary{cursor:pointer;font-weight:700;color:var(--navy);padding:10px 14px;font-size:13.5px;list-style:none}details.gg summary::before{content:"▸ ";color:var(--navy2)}details.gg[open] summary::before{content:"▾ "}details.gg .cont{padding:0 14px 12px;font-size:13px;line-height:1.55;color:var(--ink)}</style>
+
+    <details class="gg"><summary>1 · Frecuencia y cobertura</summary><div class="cont">
+    Ninguna dependencia debe pasar más de <b>90 días sin check</b>; las estaciones grandes o con acciones de prioridad Alta abiertas se revisitan <b>dentro de los 30–45 días</b> para verificar cierres. Antes de programar la semana, mirá en este tablero la columna "Checks del año" y el Historial: las filas con <b>SIN VISITA</b> son tu prioridad de agenda. La visita de verificación de cierres vale tanto como el check nuevo: sin ella, las acciones no se cierran nunca.
+    </div></details>
+
+    <details class="gg"><summary>2 · Antes de la visita</summary><div class="cont">
+    Entrá al tablero y revisá la dependencia: acciones <b>abiertas y vencidas</b>, el último puntaje y las reincidencias. Llevá esa lista impresa o en el teléfono — la primera parte del check es <b>verificar una por una las acciones del check anterior</b> con el jefe de US o el concesionario presente. Lo verificado como resuelto, mencionalo explícitamente en tu email ("se realizó la limpieza del tanque", "se repintaron los frentes"): el sistema lo lee y cierra la acción automáticamente.
+    </div></details>
+
+    <details class="gg"><summary>3 · El email del check (formato estándar)</summary><div class="cont">
+    Asunto: <b>"US [NOMBRE] - Check DD/MM"</b> (el sistema procesa asuntos que contengan "check" o "visita"). Siempre con el <b>PDF del check adjunto</b> — ahí está el detalle que la IA carga. En el cuerpo: puntaje visible ("Resultado Check: XX,XX%"), trabajos verificados como realizados, y la tabla de acciones nuevas. Enviar con copia a la casilla del sistema para que se cargue solo.
+    </div></details>
+
+    <details class="gg"><summary>4 · Redacción de acciones (léxico)</summary><div class="cont">
+    Fórmula: <b>verbo en infinitivo + objeto concreto + ubicación + evidencia esperada</b>. Bien: "Reponer matafuego vencido en isla 2 y adjuntar certificado de recarga". Mal: "matafuegos", "mejorar la limpieza", "ver tema baños". Una acción por renglón (no agrupar tres problemas en uno), verificable por un tercero sin haber estado en la visita, y con la evidencia definida (foto, registro en carpeta MAS, planilla firmada). Si la acción no se puede verificar, no se puede cerrar.
+    </div></details>
+
+    <details class="gg"><summary>5 · Prioridades y vencimientos</summary><div class="cont">
+    <b>Alta</b>: seguridad de personas, requisitos legales, carpeta MAS, derrames/incendio — vencimientos cortos (7–15 días). <b>Media</b>: imagen y operación con impacto en el cliente (15–30 días). <b>Baja</b>: estético o menor (30–60 días). El vencimiento se <b>pacta con el asignado en la visita</b>, no se inventa en el escritorio: una fecha imposible genera vencidas que no significan nada. Asignado correcto: Concesionario, Jefe US, o ambos — y que el asignado se entere en persona, no por el email.
+    </div></details>
+
+    <details class="gg"><summary>6 · Puntuación honesta</summary><div class="cont">
+    El puntaje <b>mide a la estación</b> (gestión del concesionario y jefe de US), <b>no al gestor</b>. Nadie evalúa a un gestor por poner puntajes bajos; sí se detecta la inflación: puntaje alto con acciones graves abiertas o con reincidencias es la señal de alerta número uno del Análisis IA. Coherencia: un 97% con ocho acciones de prioridad Alta no cierra por ningún lado. Documentá con fotos lo que descuenta puntos — protege tu criterio ante cualquier discusión.
+    </div></details>
+
+    <details class="gg"><summary>7 · Cierre y seguimiento</summary><div class="cont">
+    Las acciones se cierran <b>únicamente verificándolas en el siguiente check</b> — no por teléfono ni por foto de WhatsApp sin visita. Si un problema reaparece, el sistema lo marca <b>[REINCIDENTE]</b>: dos reincidencias del mismo tema significan que el compromiso del concesionario no funciona y corresponde plantearlo formalmente. Alertas automáticas: a los <b>15 días de vencida</b> te llega el aviso con copia a la jefatura; a los <b>30/45/60 días</b> (según prioridad Alta/Media/Baja) la acción queda <b>ESCALADA</b>. La meta es simple: que ningún email de alerta tuyo tenga filas rojas.
+    </div></details>
+  </div>
+
+  <div class="card">
     <div class="tabs">
       <button class="tab active" data-tab="obs">Observaciones</button>
       <button class="tab" data-tab="rec">Reclamos</button>
@@ -163,7 +197,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
    y el mismo TOKEN definido en el script. Si queda vacío, el tablero muestra datos de ejemplo. */
-const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbxL2zckTV4F2CDoiBLh6F9Nr5G2GTDupUJO1dGHELcvAdHo-FN3lmMyaZX5HFmSrk8/exec" };  // pegar acá la URL /exec del Apps Script
+const CONFIG = { API_URL: "" };  // pegar acá la URL /exec del Apps Script
 /* La clave de acceso NO va en este archivo: es el TOKEN definido en el Apps Script.
    Se pide al entrar y queda guardada en el navegador de cada usuario. */
 let TOKEN = localStorage.getItem("gc_token") || "";
@@ -301,32 +335,42 @@ function render(){
   renderSemaforo(); renderCharts(obs,rec); renderDetalle(vis,obs,rec); renderIA();
 }
 
+function aniosConChecks(){
+  const ys=[...new Set(DATA.visitas.map(v=>d(v.fecha)).filter(Boolean).map(f=>f.getFullYear()))].sort();
+  return ys.length?ys:[hoy().getFullYear()];
+}
+
 function renderSemaforo(){
   const maestro=DATA.dependencias||DEPENDENCIAS;
   const ger=$("fGer").value, solo=$("fSolo").checked, sel=$("fEst").value;
   const h=hoy(), y=h.getFullYear();
+  const anios=aniosConChecks();
+  $("semHead").innerHTML="<th>Dependencia</th><th>Gerencia</th><th>Concesionario</th><th>Checks mes</th>"+
+    anios.map(a=>`<th>Checks ${a}</th>`).join("")+
+    "<th>Último puntaje</th><th>Obs. abiertas</th><th>Obs. vencidas</th><th>Reclamos abiertos</th><th>Semáforo</th>";
   const extras=[...new Set([...DATA.visitas,...DATA.observaciones,...DATA.reclamos].map(x=>x.estacion)
     .filter(e=>e&&!maestro.some(m=>m.d===e)))].map(e=>({d:e,g:"?",c:"?",a:""}));
   const tb=$("tSemaforo").querySelector("tbody"); tb.innerHTML="";
-  let T={cm:0,ca:0,oa:0,ov:0,ra:0,pS:0,pN:0};
+  let T={cm:0,ca:0,oa:0,ov:0,ra:0,pS:0,pN:0,anios:[]};
   [...maestro,...extras].forEach(m=>{
     if(ger&&m.g!==ger)return; if(sel&&m.d!==sel)return;
     const visE=DATA.visitas.filter(v=>v.estacion===m.d);
     const cm=visitasMes(visE).length;
-    const anio=visE.filter(v=>d(v.fecha)&&d(v.fecha).getFullYear()===y);
-    const ca=anio.length;
-    const ult=anio.filter(v=>v.puntaje).sort((a,b)=>d(b.fecha)-d(a.fecha))[0];
+    const porAnio=anios.map(a=>visE.filter(v=>d(v.fecha)&&d(v.fecha).getFullYear()===a).length);
+    const ca=porAnio[anios.indexOf(y)]||0;
+    const ult=visE.filter(v=>v.puntaje).sort((a,b)=>d(b.fecha)-d(a.fecha))[0];
     const o=DATA.observaciones.filter(x=>x.estacion===m.d);
     const oa=o.filter(obsAbierta).length, ov=o.filter(x=>obsAbierta(x)&&obsVencida(x)).length;
     const ra=DATA.reclamos.filter(x=>x.estacion===m.d).filter(recAbierto).length;
-    if(solo&&!(ca||oa||ra||cm))return;
+    if(solo&&!(ca||oa||ra||cm||visE.length))return;
     const sem=ov>0?["CRÍTICO","crit"]:(oa>0||ra>0)?["ATENCIÓN","warn"]:ca>0?["OK","ok"]:["SIN VISITA","warn"];
     T.cm+=cm;T.ca+=ca;T.oa+=oa;T.ov+=ov;T.ra+=ra;
-    anio.forEach(v=>{if(v.puntaje){T.pS+=Number(v.puntaje);T.pN++;}});
-    tb.insertAdjacentHTML("beforeend",`<tr><td>${esc(m.d)}</td><td>${esc(m.g)}</td><td>${esc(m.c)}</td><td>${cm}</td><td>${ca}</td><td>${ult?Number(ult.puntaje).toFixed(2)+"%":"—"}</td><td>${oa}</td><td>${ov}</td><td>${ra}</td><td><span class="sem ${sem[1]}">${sem[0]}</span></td></tr>`);
+    porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
+    visE.forEach(v=>{if(v.puntaje&&d(v.fecha)&&d(v.fecha).getFullYear()===y){T.pS+=Number(v.puntaje);T.pN++;}});
+    tb.insertAdjacentHTML("beforeend",`<tr><td>${esc(m.d)}</td><td>${esc(m.g)}</td><td>${esc(m.c)}</td><td>${cm}</td>${porAnio.map(n=>`<td>${n}</td>`).join("")}<td>${ult?Number(ult.puntaje).toFixed(2)+"%":"—"}</td><td>${oa}</td><td>${ov}</td><td>${ra}</td><td><span class="sem ${sem[1]}">${sem[0]}</span></td></tr>`);
   });
   const semT=T.ov>0?["CRÍTICO","crit"]:(T.oa>0||T.ra>0)?["ATENCIÓN","warn"]:["OK","ok"];
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total red</td><td>—</td><td>—</td><td>${T.cm}</td><td>${T.ca}</td><td>${T.pN?(T.pS/T.pN).toFixed(1)+"%":"—"}</td><td>${T.oa}</td><td>${T.ov}</td><td>${T.ra}</td><td><span class="sem ${semT[1]}">${semT[0]}</span></td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total red</td><td>—</td><td>—</td><td>${T.cm}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>${T.pN?(T.pS/T.pN).toFixed(1)+"%":"—"}</td><td>${T.oa}</td><td>${T.ov}</td><td>${T.ra}</td><td><span class="sem ${semT[1]}">${semT[0]}</span></td></tr>`);
 }
 
 function graf(id,tipo,labels,data,colores,opts={}){
@@ -430,7 +474,49 @@ async function procesarArchivos(lista){
     total+=f.size;
     const esEml=f.name.toLowerCase().endsWith(".eml")||f.type==="message/rfc822";
     const esMsg=f.name.toLowerCase().endsWith(".msg");
-    if(esMsg){$("cargaPdfInfo").innerHTML='<span style="color:var(--crit)">Los .msg de Outlook no se pueden leer acá: desde Gmail usá ⋮ → "Descargar el mensaje" (.eml), o adjuntá el PDF suelto.</span>';continue;}
+    if(esMsg){
+      try{
+        $("cargaPdfInfo").textContent="Leyendo email de Outlook…";
+        if(!window._MsgReader){
+          const m1=await import("https://cdn.jsdelivr.net/npm/@kenjiuno/msgreader@1.28.0/+esm");
+          const m2=await import("https://cdn.jsdelivr.net/npm/@kenjiuno/decompressrtf@0.1.6/+esm");
+          window._MsgReader=m1.default&&m1.default.default?m1.default.default:(m1.default||m1.MsgReader);
+          window._decompressRTF=m2.decompressRTF||((m2.default||{}).decompressRTF);
+        }
+        const buf=await f.arrayBuffer();
+        const msgR=new window._MsgReader(new Uint8Array(buf));
+        const md=msgR.getFileData();
+        if(md.subject&&!$("cargaAsunto").value)$("cargaAsunto").value=md.subject;
+        let body=md.body||"";
+        if(!body&&md.compressedRtf&&window._decompressRTF){
+          try{
+            const rtf=new TextDecoder("latin1").decode(new Uint8Array(window._decompressRTF(md.compressedRtf)));
+            body=rtf.replace(/\\'([0-9a-f]{2})/gi,(x,h)=>String.fromCharCode(parseInt(h,16)))
+                    .replace(/\{\\\*[^{}]*\}/g,"").replace(/\\[a-z]+-?\d* ?/gi,"").replace(/[{}]/g,"").trim();
+          }catch(e2){}
+        }
+        if(body&&!$("cargaCuerpo").value.trim())$("cargaCuerpo").value=body.substring(0,10000);
+        // adjuntos: PDFs primero, imágenes grandes después (se saltean logos de firma)
+        const atts=(md.attachments||[]);
+        const elegidos=[...atts.filter(a=>/\.pdf$/i.test(a.fileName||"")),
+                        ...atts.filter(a=>/\.(png|jpe?g)$/i.test(a.fileName||"")&&a.contentLength>50000)].slice(0,3);
+        let nombres=[];
+        for(const a of elegidos){
+          const att=msgR.getAttachment(a);
+          if(total+att.content.length>18*1024*1024)break;
+          total+=att.content.length;
+          let bin=""; const u8=att.content;
+          for(let i=0;i<u8.length;i+=8192)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));
+          const mt=/\.pdf$/i.test(att.fileName)?"application/pdf":(/\.png$/i.test(att.fileName)?"image/png":"image/jpeg");
+          ADJUNTOS.push({media_type:mt,data:btoa(bin),nombre:att.fileName});
+          nombres.push(att.fileName);
+        }
+        $("cargaPdfInfo").textContent="Email de Outlook leído: "+(md.subject||f.name)+(nombres.length?" — adjuntos: "+nombres.join(", "):" (sin PDF adjunto)");
+      }catch(err){
+        $("cargaPdfInfo").innerHTML='<span style="color:var(--crit)">No pude leer el .msg ('+esc(err.message)+'). Alternativa: adjuntá el PDF suelto.</span>';
+      }
+      continue;
+    }
     const esExcel=/\.(xlsx|xls|csv)$/i.test(f.name);
     if(esExcel){
       try{
@@ -479,8 +565,16 @@ const dz=$("dropZone");
 }));
 dz.addEventListener("drop",e=>{
   if(e.dataTransfer.files&&e.dataTransfer.files.length){procesarArchivos(e.dataTransfer.files);return;}
-  const txt=e.dataTransfer.getData("text/plain");
-  if(txt&&txt.length>40)$("cargaCuerpo").value=txt;
+  const txt=(e.dataTransfer.getData("text/plain")||"").trim();
+  if(!txt)return;
+  if(txt.length<200&&!txt.includes("\n")){
+    // llegó solo el asunto: arrastraron el email desde la bandeja
+    if(!$("cargaAsunto").value)$("cargaAsunto").value=txt;
+    $("cargaPdfInfo").innerHTML='<span style="color:var(--warn)">Llegó solo el asunto — el email en sí no se puede arrastrar. Arrastrá el <b>PDF adjunto</b> desde adentro del mail, o el archivo .eml descargado.</span>';
+  }else{
+    $("cargaCuerpo").value=txt;
+    $("cargaPdfInfo").textContent="Texto del email cargado.";
+  }
 });
 
 $("btnCargar").addEventListener("click",async()=>{
@@ -588,12 +682,13 @@ $("btnExportar").addEventListener("click",()=>{
     const o=DATA.observaciones.filter(x=>x.estacion===m.d);
     const oa=o.filter(obsAbierta).length, ov=o.filter(x=>obsAbierta(x)&&obsVencida(x)).length;
     const ra=DATA.reclamos.filter(x=>x.estacion===m.d).filter(recAbierto).length;
-    if(!anio.length&&!oa&&!ra)return;
-    const ult=anio.filter(v=>v.puntaje).sort((a,b)=>d(b.fecha)-d(a.fecha))[0];
-    sem.push({Dependencia:m.d,Gerencia:m.g,Concesionario:m.c,
-      "Checks año":anio.length,"Último puntaje %":ult?Number(ult.puntaje):null,
+    if(!anio.length&&!visE.length&&!oa&&!ra)return;
+    const ult=visE.filter(v=>v.puntaje).sort((a,b)=>d(b.fecha)-d(a.fecha))[0];
+    const filaSem={Dependencia:m.d,Gerencia:m.g,Concesionario:m.c};
+    aniosConChecks().forEach(a=>filaSem["Checks "+a]=visE.filter(v=>d(v.fecha)&&d(v.fecha).getFullYear()===a).length);
+    sem.push(Object.assign(filaSem,{"Último puntaje %":ult?Number(ult.puntaje):null,
       "Obs. abiertas":oa,"Obs. vencidas":ov,"Reclamos abiertos":ra,
-      "Semáforo":ov>0?"CRÍTICO":(oa>0||ra>0)?"ATENCIÓN":anio.length?"OK":"SIN VISITA"});
+      "Semáforo":ov>0?"CRÍTICO":(oa>0||ra>0)?"ATENCIÓN":anio.length?"OK":"SIN VISITA"}));
   });
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sem.length?sem:[{Info:"Sin datos"}]),"Semáforo");
   // 2) Historial mensual
