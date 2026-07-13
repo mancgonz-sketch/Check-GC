@@ -104,6 +104,15 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     </table></div>
   </div>
 
+  <div class="card">
+    <h2>Panel de Gestores — actividad y seguimiento</h2>
+    <div class="tablewrap"><table id="tGestores">
+      <thead><tr><th>Gestor</th><th>Checks mes</th><th>Trimestre</th><th>Semestre</th><th>Año</th><th>Puntaje prom.</th><th>Deps. visitadas</th><th>Observaciones</th><th>Solucionadas</th><th>Abiertas</th><th>Vencidas</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Períodos calendario del año en curso. "Deps. visitadas" = de sus dependencias asignadas, cuántas tienen check en el año (cobertura). ACA CENTRAL cuenta para Iglesias y Bosch; Chivilcoy excluida por cerrada.</p>
+  </div>
+
   <div class="card" id="dropZone" style="transition:box-shadow .15s,border .15s;border:2px dashed transparent">
     <h2>Cargar check / email</h2>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><b>Arrastrá acá el email guardado de Outlook (.msg), el PDF o el .eml</b>, adjuntalo con el botón, o pegá el texto del mail. La IA identifica dependencia, gestor, puntaje y acciones, y lo carga al sistema.</p>
@@ -197,7 +206,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
    y el mismo TOKEN definido en el script. Si queda vacío, el tablero muestra datos de ejemplo. */
-const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbxL2zckTV4F2CDoiBLh6F9Nr5G2GTDupUJO1dGHELcvAdHo-FN3lmMyaZX5HFmSrk8/exec" };  // pegar acá la URL /exec del Apps Script
+const CONFIG = { API_URL: "" };  // pegar acá la URL /exec del Apps Script
 /* La clave de acceso NO va en este archivo: es el TOKEN definido en el Apps Script.
    Se pide al entrar y queda guardada en el navegador de cada usuario. */
 let TOKEN = localStorage.getItem("gc_token") || "";
@@ -332,12 +341,85 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderSemaforo(); renderCharts(obs,rec); renderDetalle(vis,obs,rec); renderIA();
+  renderSemaforo(); renderGestores(); renderCharts(obs,rec); renderDetalle(vis,obs,rec); renderIA();
 }
 
 function aniosConChecks(){
   const ys=[...new Set(DATA.visitas.map(v=>d(v.fecha)).filter(Boolean).map(f=>f.getFullYear()))].sort();
   return ys.length?ys:[hoy().getFullYear()];
+}
+
+const norm=x=>String(x||"").trim().toUpperCase();
+
+/* Asignaciones oficiales gestor -> dependencias (base APIES). CHIVILCOY excluida por cerrada. */
+const ASIGNACIONES={
+ "ZARACHO":["SANTIAGO DEL ESTERO","OJO DE AGUA","ASCOCHINGA","LA FALDA","VILLA CARLOS PAZ","VILLA DEL DIQUE","RIO CUARTO","CANALS","SAN FRANCISCO","CS CORDOBA","VILLA MARIA"],
+ "HORNILLA":["SAN LUIS","ENCON","LAS FLORES","SAN JUAN","JACHAL","VALLE FERTIL","LA PAZ","VILLA MERCEDES 28","VILLA MERCEDES 122","US CORDOBA","CS MENDOZA"],
+ "IGLESIAS":["DON TORCUATO","LUJAN","ARRECIFES","RIO TALA","DELTA","BELGRANO","PALERMO","OLIVOS","CS LA PLATA","US LA PLATA","BARRACAS","AVELLANEDA","CENTRAL"],
+ "BOSCH":["CENTRAL","BUEN AYRE NORTE","BUEN AYRE SUR","PILAR","INGENIERO MASCHWITZ","SAN NICOLAS","ACCESO NORTE I","ACCESO NORTE II","FLORES","CARMEN DE ARECO","LANUS","VILLA DEVOTO","MERCEDES"],
+ "LERGA":["MAR DEL PLATA BROWN","MAR DEL PLATA COLON","MAR DEL PLATA INDEPENDENCIA","MIRAMAR","25 DE MAYO","9 DE JULIO","SANTA CLARA DEL MAR","TRENQUE LAUQUEN","GORCHS","VILLA GESELL","LINCOLN","SAN CLEMENTE DEL TUYU"],
+ "LACENTRE":["BAHIA BLANCA","CARHUE","SAN CAYETANO","VILLA BORDEAU","BOLIVAR","DOLORES","CHASCOMUS","SAMBOROMBON","NECOCHEA","TANDIL"],
+ "SQUADRONI":["EL BOLSON","SANTA ROSA CENTRO","SANTA ROSA","SAN MARTIN DE LOS ANDES","ZAPALA","CHOELE CHOEL","CALEU CALEU","LOS MENUCOS","VILLA LA ANGOSTURA","CHOS MALAL","VILLA MASCARDI","NEUQUEN","TRAFUL","COLONIA 25 DE MAYO","CIPOLLETTI"],
+ "CORTES":["POSADAS","CORRIENTES","BERNARDO DE IRIGOYEN","CLORINDA","ELDORADO","FORMOSA","INGENIERO JUAREZ","ROQUE SAENZ PEÑA","ITA IBATE","PUERTO IGUAZU","OBERA"],
+ "BRUNA":["CERES","RAFAELA","SUSANA","GUALEGUAYCHU","CURUZU CUATIA","VENADO TUERTO","RUFINO","COLON","PASO DE LOS LIBRES","TORTUGAS","CONCORDIA","SANTA FE","LA PAZ","FIRMAT"],
+ "AGUIRRE":["USHUAIA","SAN SEBASTIAN","SIERRA GRANDE","TRELEW","GARAYALDE","VIEDMA","LOS ALTARES","SARMIENTO","PUERTO PIRAMIDES","RIO GALLEGOS","ESQUEL"],
+ "MOYA":["CS TUCUMAN","CATAMARCA","LA RIOJA","CHEPES","GOBERNADOR GORDILLO","TINOGASTA","VILLA ALBERDI","ANILLACO","FAMATINA","SAN ANTONIO DE LA PAZ","SAN MARTIN"],
+ "FICOSECO":["SAN SALVADOR DE JUJUY","SALTA","CACHI","CAFAYATE","HUMAHUACA","LA QUIACA","ROSARIO DE LA FRONTERA","TARTAGAL","TACO POZO","US TUCUMAN","PASO DE JAMA","HUALFIN"]
+};
+const sinAcentos=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const normEst=x=>sinAcentos(x).toUpperCase().replace(/[().]/g,"").replace(/-/g," ").replace(/\s+/g," ").trim();
+
+
+function gestorDeObs(o,mapaDepGestor){
+  return norm(o.gestor)||mapaDepGestor[o.estacion]||"";
+}
+
+function renderGestores(){
+  const tb=$("tGestores").querySelector("tbody"); if(!tb)return;
+  tb.innerHTML="";
+  const h=hoy(), y=h.getFullYear(), m=h.getMonth();
+  const triIni=Math.floor(m/3)*3, semIni=m<6?0:6;
+  // mapa dependencia -> gestor del último check (para obs sin gestor)
+  const mapa={};
+  [...DATA.visitas].sort((a,b)=>d(a.fecha)-d(b.fecha)).forEach(v=>{if(v.estacion&&v.gestor)mapa[v.estacion]=norm(v.gestor);});
+  const nombres=DATA.gestores?DATA.gestores.map(g=>({n:norm(g.nombre),mat:g.mat})):
+    [...new Set(DATA.visitas.map(v=>norm(v.gestor)).filter(Boolean))].map(n=>({n,mat:""}));
+  let T={cm:0,ct:0,cs:0,ca:0,ob:0,ce:0,ab:0,ve:0,pS:0,pN:0};
+  const filas=[];
+  nombres.forEach(g=>{
+    const vis=DATA.visitas.filter(v=>norm(v.gestor)===g.n);
+    const anio=vis.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;});
+    const enRango=(ini)=>anio.filter(v=>d(v.fecha).getMonth()>=ini).length;
+    const cm=anio.filter(v=>d(v.fecha).getMonth()===m).length;
+    const ct=enRango(triIni), cs=enRango(semIni), ca=anio.length;
+    const conP=anio.filter(v=>v.puntaje);
+    const prom=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length):null;
+    const asig=ASIGNACIONES[g.n]||[];
+    let depsCell;
+    if(asig.length){
+      const visitadasN=anio.map(v=>normEst(v.estacion));
+      const cubiertas=asig.filter(a=>{const an=normEst(a);return visitadasN.some(vn=>vn.indexOf(an)===0||vn.indexOf(" "+an)>=0||an.indexOf(vn.split(" ")[0])>=0&&vn.split(" ")[0].length>3);}).length;
+      const pct=Math.round(cubiertas/asig.length*100);
+      depsCell=`${cubiertas}/${asig.length} <span style="color:var(--muted);font-size:11px">(${pct}%)</span>`;
+    }else{
+      depsCell=String(new Set(anio.map(v=>v.estacion)).size);
+    }
+    const obs=DATA.observaciones.filter(o=>gestorDeObs(o,mapa)===g.n);
+    const ce=obs.filter(o=>o.estado==="Cerrada").length;
+    const ab=obs.filter(obsAbierta).length;
+    const ve=obs.filter(o=>obsAbierta(o)&&obsVencida(o)).length;
+    if(!ca&&!obs.length&&!vis.length){filas.push({html:`<tr><td><b>${esc(g.n)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td><td>0</td><td>0</td><td>0</td><td>0</td><td>—</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>`,ord:-1});return;}
+    T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;T.ob+=obs.length;T.ce+=ce;T.ab+=ab;T.ve+=ve;
+    if(prom!==null){T.pS+=prom*conP.length;T.pN+=conP.length;}
+    filas.push({ord:ve*1000+ab*10+ca,html:`<tr><td><b>${esc(g.n)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
+      <td>${cm}</td><td>${ct}</td><td>${cs}</td><td>${ca}</td>
+      <td>${prom!==null?prom.toFixed(1)+"%":"—"}</td><td>${depsCell}</td>
+      <td>${obs.length}</td><td>${ce?`<span class="chip ok">${ce}</span>`:0}</td>
+      <td>${ab?`<span class="chip warn">${ab}</span>`:0}</td>
+      <td>${ve?`<span class="chip crit">${ve}</span>`:0}</td></tr>`});
+  });
+  filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td><td>${T.ca}</td><td>${T.pN?(T.pS/T.pN).toFixed(1)+"%":"—"}</td><td>—</td><td>${T.ob}</td><td>${T.ce}</td><td>${T.ab}</td><td>${T.ve}</td></tr>`);
 }
 
 function renderSemaforo(){
@@ -422,8 +504,8 @@ function renderDetalle(vis,obs,rec){
     const nombres=DATA.gestores?DATA.gestores.map(g=>g.nombre):[...new Set(DATA.visitas.map(v=>v.gestor).filter(Boolean))];
     html=`<table><thead><tr><th>Gestor</th><th>Checks año</th><th>Puntaje prom. otorgado</th><th>Acciones</th><th>Acciones/check</th><th>% Alta</th><th>% cerradas</th><th>Vencidas abiertas</th><th>Último check</th></tr></thead><tbody>`;
     nombres.forEach(n=>{
-      const ch=DATA.visitas.filter(v=>v.gestor===n&&d(v.fecha)&&d(v.fecha).getFullYear()===y);
-      const ob=DATA.observaciones.filter(o=>o.gestor===n&&d(o.fecha)&&d(o.fecha).getFullYear()===y);
+      const ch=DATA.visitas.filter(v=>norm(v.gestor)===norm(n)&&d(v.fecha)&&d(v.fecha).getFullYear()===y);
+      const ob=DATA.observaciones.filter(o=>norm(o.gestor)===norm(n)&&d(o.fecha)&&d(o.fecha).getFullYear()===y);
       if(!ch.length&&!ob.length)return;
       const conP=ch.filter(v=>v.puntaje);
       const prom=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
