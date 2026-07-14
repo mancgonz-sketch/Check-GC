@@ -77,7 +77,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
   </div>
 </header>
 <main>
-  <div class="kpis">
+  <div class="kpis" style="display:none">
     <div class="kpi"><div class="v" id="kVisitas">–</div><div class="l">Checks del mes</div></div>
     <div class="kpi"><div class="v" id="kPuntaje">–</div><div class="l">Puntaje Check prom. (90 d)</div></div>
     <div class="kpi warn"><div class="v" id="kObsAb">–</div><div class="l">Observaciones abiertas</div></div>
@@ -86,7 +86,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     <div class="kpi"><div class="v" id="kSLA">–</div><div class="l">% Reclamos dentro de SLA</div></div>
   </div>
 
-  <div class="filters">
+  <div class="filters" style="display:none">
     <select id="fGer"><option value="">Todas las gerencias</option></select>
     <select id="fEst"><option value="">Todas las dependencias</option></select>
     <select id="fGestor"><option value="">Todos los Gestores</option></select>
@@ -96,7 +96,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     </label>
   </div>
 
-  <div class="card">
+  <div class="card" style="display:none">
     <h2>Semáforo por dependencia</h2>
     <div class="tablewrap"><table id="tSemaforo">
       <thead><tr id="semHead"></tr></thead>
@@ -105,15 +105,36 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
   </div>
 
   <div class="card">
-    <h2>Panel de Gestores — actividad y seguimiento</h2>
+    <h2>Panel de Gestores — frecuencia de visitas</h2>
+    <div id="statGlobal" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
     <div class="tablewrap"><table id="tGestores">
-      <thead><tr><th>Gestor</th><th>Checks mes</th><th>Trimestre</th><th>Semestre</th><th>Año</th><th>Puntaje prom.</th><th>Deps. visitadas</th><th>Observaciones</th><th>Solucionadas</th><th>Abiertas</th><th>Vencidas</th></tr></thead>
+      <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Períodos calendario del año en curso. "Deps. visitadas" = de sus dependencias asignadas, cuántas tienen check en el año (cobertura). ACA CENTRAL cuenta para Iglesias y Bosch; Chivilcoy excluida por cerrada.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch; Chivilcoy excluida por cerrada.</p>
+
+    <h2 style="margin-top:22px" id="tituloCorte">Resumen desde el 1/7</h2>
+    <div class="tablewrap"><table id="tCorte">
+      <thead><tr><th>Gestor</th><th>Visitas</th><th>Estaciones visitadas</th><th>% de sus asignadas</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
   </div>
 
-  <div class="card" id="dropZone" style="transition:box-shadow .15s,border .15s;border:2px dashed transparent">
+  <div class="card">
+    <h2>Estaciones — frecuencia de visita</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input id="buscaEst" placeholder="Buscar estación…" style="padding:8px 12px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px;min-width:220px">
+      <select id="filtroGestorEst" style="padding:8px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px"><option value="">Todos los gestores</option></select>
+      <label style="font-size:12.5px;color:var(--muted)"><input type="checkbox" id="soloSinVisita"> Solo sin visita este año</label>
+    </div>
+    <div class="tablewrap" style="max-height:420px"><table id="tEstaciones">
+      <thead><tr><th>Estación</th><th>Divisional</th><th>Gestor asignado</th><th>Visitas año</th><th>Visitas histórico</th><th>Última visita</th><th>Días sin visita</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Verde: visitada hace menos de 45 días · Amarillo: 45–90 · Rojo: más de 90 días o nunca visitada. Ordenadas por días sin visita, de mayor a menor.</p>
+  </div>
+
+  <div class="card" id="dropZone" style="display:none">
     <h2>Cargar check / email</h2>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><b>Arrastrá acá el email guardado de Outlook (.msg), el PDF o el .eml</b>, adjuntalo con el botón, o pegá el texto del mail. La IA identifica dependencia, gestor, puntaje y acciones, y lo carga al sistema.</p>
     <input type="text" id="cargaAsunto" placeholder="Asunto del email (opcional, ej: US GARAYALDE - Check 25/06)" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px">
@@ -129,7 +150,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" style="display:none">
     <h2>Evolución por dependencia — check a check</h2>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <select id="fEvol"></select>
@@ -149,14 +170,14 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     <div class="tablewrap" style="margin-top:14px" id="iaDeps"></div>
   </div>
 
-  <div class="charts">
+  <div class="charts" style="display:none">
     <div class="chartbox"><h3>Checks por mes — año en curso</h3><canvas id="chMes"></canvas></div>
     <div class="chartbox"><h3>Observaciones por categoría</h3><canvas id="chCat"></canvas></div>
     <div class="chartbox"><h3>Reclamos por canal</h3><canvas id="chCanal"></canvas></div>
     <div class="chartbox"><h3>Observaciones por criticidad y estado</h3><canvas id="chCrit"></canvas></div>
   </div>
 
-  <div class="card">
+  <div class="card" style="display:none">
     <h2>📘 Guía del Gestor de Calidad</h2>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Estándar de trabajo del equipo. El Perfil de Gestores y el Análisis IA de este tablero miden el cumplimiento de esta guía con los datos que se van cargando.</p>
     <style>details.gg{border:1px solid #E4EAF3;border-radius:8px;margin-bottom:8px;padding:0}details.gg summary{cursor:pointer;font-weight:700;color:var(--navy);padding:10px 14px;font-size:13.5px;list-style:none}details.gg summary::before{content:"▸ ";color:var(--navy2)}details.gg[open] summary::before{content:"▾ "}details.gg .cont{padding:0 14px 12px;font-size:13px;line-height:1.55;color:var(--ink)}</style>
@@ -190,7 +211,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     </div></details>
   </div>
 
-  <div class="card">
+  <div class="card" style="display:none">
     <div class="tabs">
       <button class="tab active" data-tab="obs">Observaciones</button>
       <button class="tab" data-tab="rec">Reclamos</button>
@@ -341,7 +362,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderSemaforo(); renderGestores(); renderCharts(obs,rec); renderDetalle(vis,obs,rec); renderIA();
+  renderGestores(); renderEstaciones();
 }
 
 function aniosConChecks(){
@@ -374,52 +395,130 @@ function gestorDeObs(o,mapaDepGestor){
   return norm(o.gestor)||mapaDepGestor[o.estacion]||"";
 }
 
+
+const DIV_GESTOR={"ZARACHO":"Córdoba","HORNILLA":"Córdoba","IGLESIAS":"CAP y GBA","BOSCH":"CAP y GBA","LERGA":"MDP","LACENTRE":"MDP","SQUADRONI":"Neuquén","CORTES":"Rosario","BRUNA":"Rosario","AGUIRRE":"Trelew","MOYA":"Tucumán","FICOSECO":"Tucumán"};
+
+function listaEstaciones(){
+  const mapa={};
+  Object.entries(ASIGNACIONES).forEach(([g,ests])=>ests.forEach(e=>{
+    const k=normEst(e);
+    if(!mapa[k])mapa[k]={nombre:e,gestores:[],div:DIV_GESTOR[g]||""};
+    mapa[k].gestores.push(g);
+  }));
+  return Object.entries(mapa).map(([k,v])=>({k,...v}));
+}
+
+function renderEstaciones(){
+  const tb=$("tEstaciones")&&$("tEstaciones").querySelector("tbody"); if(!tb)return;
+  const q=normEst($("buscaEst").value||"");
+  const fg=$("filtroGestorEst").value;
+  const soloSin=$("soloSinVisita").checked;
+  const h=hoy(), y=h.getFullYear();
+  tb.innerHTML="";
+  const filas=listaEstaciones().map(e=>{
+    const vis=DATA.visitas.filter(v=>{const vn=normEst(v.estacion);return vn.indexOf(e.k)===0||vn.indexOf(" "+e.k)>=0;});
+    const anio=vis.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;});
+    const ult=vis.map(v=>d(v.fecha)).filter(Boolean).sort((a,b)=>b-a)[0];
+    const dias=ult?Math.round((h-ult)/86400000):null;
+    return {...e,anio:anio.length,tot:vis.length,ult,dias};
+  }).filter(e=>{
+    if(q&&e.k.indexOf(q)<0)return false;
+    if(fg&&e.gestores.indexOf(fg)<0)return false;
+    if(soloSin&&e.anio>0)return false;
+    return true;
+  }).sort((a,b)=>(b.dias===null?99999:b.dias)-(a.dias===null?99999:a.dias));
+  filas.forEach(e=>{
+    const cls=e.dias===null||e.dias>90?"crit":e.dias>45?"warn":"ok";
+    const txt=e.dias===null?"NUNCA":e.dias+" días";
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(e.nombre)}</b></td><td>${esc(e.div)}</td><td>${e.gestores.join(" / ")}</td>
+      <td>${e.anio}</td><td>${e.tot}</td><td>${e.ult?fmt(e.ult):"—"}</td><td><span class="chip ${cls}">${txt}</span></td></tr>`);
+  });
+  if(!filas.length)tb.innerHTML='<tr><td colspan="7" style="color:var(--muted)">Sin resultados para ese filtro.</td></tr>';
+  // poblar el filtro de gestor una sola vez
+  if($("filtroGestorEst").options.length===1)
+    Object.keys(ASIGNACIONES).sort().forEach(g=>$("filtroGestorEst").insertAdjacentHTML("beforeend",`<option>${g}</option>`));
+}
+
+const NOMBRES_GESTOR={"ZARACHO":"Soledad","HORNILLA":"Javier","IGLESIAS":"Gabriela","BOSCH":"Guillermina","LERGA":"Nicolás","LACENTRE":"Analía","SQUADRONI":"Emiliano","CORTES":"Christian","BRUNA":"Jesús","AGUIRRE":"Manuel","MOYA":"Belén","FICOSECO":"Federico"};
+const FECHA_CORTE="2026-07-01";   // inicio del período de seguimiento del resumen
+
+function coberturaDe(gN,visitas){
+  const asig=ASIGNACIONES[gN]||[];
+  if(!asig.length)return null;
+  const vn=visitas.map(v=>normEst(v.estacion));
+  const cubiertas=asig.filter(a=>{const an=normEst(a);return vn.some(x=>x.indexOf(an)===0||x.indexOf(" "+an)>=0);}).length;
+  return {cubiertas,total:asig.length,pct:Math.round(cubiertas/asig.length*100)};
+}
+
+function aniosConVisitas(){
+  const ys=[...new Set(DATA.visitas.map(v=>d(v.fecha)).filter(Boolean).map(f=>f.getFullYear()))].sort();
+  return ys.length?ys:[hoy().getFullYear()];
+}
+
 function renderGestores(){
   const tb=$("tGestores").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
-  const h=hoy(), y=h.getFullYear(), m=h.getMonth();
-  const triIni=Math.floor(m/3)*3, semIni=m<6?0:6;
-  // mapa dependencia -> gestor del último check (para obs sin gestor)
-  const mapa={};
-  [...DATA.visitas].sort((a,b)=>d(a.fecha)-d(b.fecha)).forEach(v=>{if(v.estacion&&v.gestor)mapa[v.estacion]=norm(v.gestor);});
+  const h=hoy(), y=h.getFullYear();
+  const anios=aniosConVisitas();
+  $("gestHead").innerHTML="<th>Gestor</th><th>Último mes</th><th>Último trimestre</th><th>Último semestre</th>"+
+    anios.map(a=>`<th>Año ${a}</th>`).join("")+
+    "<th>Estaciones visitadas (${y})</th><th>Cobertura de asignadas</th>".replace("${y}",y);
+  const hace=n=>{const f=new Date(h);f.setDate(f.getDate()-n);return f;};
+  const d30=hace(30), d90=hace(90), d180=hace(180);
   const nombres=DATA.gestores?DATA.gestores.map(g=>({n:norm(g.nombre),mat:g.mat})):
     [...new Set(DATA.visitas.map(v=>norm(v.gestor)).filter(Boolean))].map(n=>({n,mat:""}));
-  let T={cm:0,ct:0,cs:0,ca:0,ob:0,ce:0,ab:0,ve:0,pS:0,pN:0};
+  let T={cm:0,ct:0,cs:0,ca:0,anios:[]};
   const filas=[];
   nombres.forEach(g=>{
-    const vis=DATA.visitas.filter(v=>norm(v.gestor)===g.n);
-    const anio=vis.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;});
-    const enRango=(ini)=>anio.filter(v=>d(v.fecha).getMonth()>=ini).length;
-    const cm=anio.filter(v=>d(v.fecha).getMonth()===m).length;
-    const ct=enRango(triIni), cs=enRango(semIni), ca=anio.length;
-    const conP=anio.filter(v=>v.puntaje);
-    const prom=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length):null;
-    const asig=ASIGNACIONES[g.n]||[];
-    let depsCell;
-    if(asig.length){
-      const visitadasN=anio.map(v=>normEst(v.estacion));
-      const cubiertas=asig.filter(a=>{const an=normEst(a);return visitadasN.some(vn=>vn.indexOf(an)===0||vn.indexOf(" "+an)>=0||an.indexOf(vn.split(" ")[0])>=0&&vn.split(" ")[0].length>3);}).length;
-      const pct=Math.round(cubiertas/asig.length*100);
-      depsCell=`${cubiertas}/${asig.length} <span style="color:var(--muted);font-size:11px">(${pct}%)</span>`;
-    }else{
-      depsCell=String(new Set(anio.map(v=>v.estacion)).size);
+    const vis=DATA.visitas.filter(v=>norm(v.gestor)===g.n&&d(v.fecha));
+    const cm=vis.filter(v=>d(v.fecha)>=d30).length;
+    const ct=vis.filter(v=>d(v.fecha)>=d90).length;
+    const cs=vis.filter(v=>d(v.fecha)>=d180).length;
+    const porAnio=anios.map(a=>vis.filter(v=>d(v.fecha).getFullYear()===a).length);
+    const anio=vis.filter(v=>d(v.fecha).getFullYear()===y);
+    const ca=anio.length;
+    const distintas=new Set(anio.map(v=>normEst(v.estacion))).size;
+    const cob=coberturaDe(g.n,anio);
+    let cobCell="—";
+    if(cob){
+      const cls=cob.pct>=70?"ok":cob.pct>=35?"warn":"crit";
+      cobCell=`<span class="chip ${cls}">${cob.cubiertas}/${cob.total} · ${cob.pct}%</span>`;
     }
-    const obs=DATA.observaciones.filter(o=>gestorDeObs(o,mapa)===g.n);
-    const ce=obs.filter(o=>o.estado==="Cerrada").length;
-    const ab=obs.filter(obsAbierta).length;
-    const ve=obs.filter(o=>obsAbierta(o)&&obsVencida(o)).length;
-    if(!ca&&!obs.length&&!vis.length){filas.push({html:`<tr><td><b>${esc(g.n)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td><td>0</td><td>0</td><td>0</td><td>0</td><td>—</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>`,ord:-1});return;}
-    T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;T.ob+=obs.length;T.ce+=ce;T.ab+=ab;T.ve+=ve;
-    if(prom!==null){T.pS+=prom*conP.length;T.pN+=conP.length;}
-    filas.push({ord:ve*1000+ab*10+ca,html:`<tr><td><b>${esc(g.n)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
-      <td>${cm}</td><td>${ct}</td><td>${cs}</td><td>${ca}</td>
-      <td>${prom!==null?prom.toFixed(1)+"%":"—"}</td><td>${depsCell}</td>
-      <td>${obs.length}</td><td>${ce?`<span class="chip ok">${ce}</span>`:0}</td>
-      <td>${ab?`<span class="chip warn">${ab}</span>`:0}</td>
-      <td>${ve?`<span class="chip crit">${ve}</span>`:0}</td></tr>`});
+    const nom=NOMBRES_GESTOR[g.n]?`${g.n}, ${NOMBRES_GESTOR[g.n]}`:g.n;
+    T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;
+    porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
+    filas.push({ord:ca*100+cm,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
+      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map(n=>`<td>${n}</td>`).join("")}<td>${distintas}</td><td>${cobCell}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td><td>${T.ca}</td><td>${T.pN?(T.pS/T.pN).toFixed(1)+"%":"—"}</td><td>—</td><td>${T.ob}</td><td>${T.ce}</td><td>${T.ab}</td><td>${T.ve}</td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>—</td><td>—</td></tr>`);
+  const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;}).map(v=>normEst(v.estacion))).size;
+  $("statGlobal").textContent=`${T.ca} visitas en ${y} · ${estVisit} estaciones visitadas de 143 asignadas en la red`;
+  renderCorte(nombres);
+}
+
+function renderCorte(nombres){
+  const tb=$("tCorte")&&$("tCorte").querySelector("tbody"); if(!tb)return;
+  tb.innerHTML="";
+  const corte=d(FECHA_CORTE);
+  $("tituloCorte").textContent="Resumen desde el "+fmt(corte);
+  let TV=0;
+  const filas=[];
+  nombres.forEach(g=>{
+    const vis=DATA.visitas.filter(v=>norm(v.gestor)===g.n&&d(v.fecha)&&d(v.fecha)>=corte);
+    const distintas=new Set(vis.map(v=>normEst(v.estacion))).size;
+    const cob=coberturaDe(g.n,vis);
+    let pctCell="—";
+    if(cob){
+      const cls=cob.pct>=70?"ok":cob.pct>=35?"warn":"crit";
+      pctCell=`<span class="chip ${cls}">${cob.pct}%</span>`;
+    }
+    const nom=NOMBRES_GESTOR[g.n]?`${g.n}, ${NOMBRES_GESTOR[g.n]}`:g.n;
+    TV+=vis.length;
+    filas.push({ord:vis.length,html:`<tr><td><b>${esc(nom)}</b></td><td>${vis.length}</td><td>${distintas}</td><td>${pctCell}</td></tr>`});
+  });
+  filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${TV}</td><td>—</td><td>—</td></tr>`);
 }
 
 function renderSemaforo(){
@@ -753,6 +852,12 @@ $("lockBtn").addEventListener("click",async()=>{
   }
 });
 $("lockClave").addEventListener("keydown",e=>{if(e.key==="Enter")$("lockBtn").click();});
+
+["input","change"].forEach(ev=>{
+  $("buscaEst").addEventListener(ev,renderEstaciones);
+  $("filtroGestorEst").addEventListener(ev,renderEstaciones);
+  $("soloSinVisita").addEventListener(ev,renderEstaciones);
+});
 
 $("btnExportar").addEventListener("click",()=>{
   const maestro=DATA.dependencias||DEPENDENCIAS;
