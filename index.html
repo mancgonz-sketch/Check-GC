@@ -51,6 +51,10 @@ tr.total td{background:var(--navy2);color:#fff;font-weight:700}
 footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
 .empty{padding:24px;text-align:center;color:var(--muted)}
 @media(max-width:700px){header h1{font-size:17px} .kpi .v{font-size:21px} #evolGrid{grid-template-columns:1fr !important}}
+#tGestores td:not(:first-child),#tGestores th:not(:first-child),
+#tCorte td:not(:first-child),#tCorte th:not(:first-child),
+#tDiv td:not(:first-child),#tDiv th:not(:first-child),
+#tEstaciones td:nth-child(n+4),#tEstaciones th:nth-child(n+4){text-align:center}
 </style>
 </head>
 <body>
@@ -111,11 +115,17 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch; Chivilcoy excluida por cerrada.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
+
+    <h2 style="margin-top:22px">Resumen por divisional — año en curso</h2>
+    <div class="tablewrap"><table id="tDiv">
+      <thead><tr><th>Divisional</th><th>Visitas (checks)</th><th>Estaciones distintas visitadas</th><th>Asignadas</th><th>Cobertura</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
 
     <h2 style="margin-top:22px" id="tituloCorte">Resumen desde el 1/7</h2>
     <div class="tablewrap"><table id="tCorte">
-      <thead><tr><th>Gestor</th><th>Visitas</th><th>Estaciones visitadas</th><th>% de sus asignadas</th></tr></thead>
+      <thead><tr><th>Gestor</th><th>Visitas</th><th>Estaciones distintas</th><th>% de sus asignadas</th></tr></thead>
       <tbody></tbody>
     </table></div>
   </div>
@@ -221,7 +231,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
     <div class="tablewrap" id="detalle"></div>
   </div>
 </main>
-<footer>Tablero de control de Gestores de Calidad · Elaborado por Gonzalo Manca — Gerente Divisional · Destinatario: Fernando Cancelmo</footer>
+<footer></footer>
 
 <script>
 /* ================= CONFIG =================
@@ -440,7 +450,7 @@ function renderEstaciones(){
 }
 
 const NOMBRES_GESTOR={"ZARACHO":"Soledad","HORNILLA":"Javier","IGLESIAS":"Gabriela","BOSCH":"Guillermina","LERGA":"Nicolás","LACENTRE":"Analía","SQUADRONI":"Emiliano","CORTES":"Christian","BRUNA":"Jesús","AGUIRRE":"Manuel","MOYA":"Belén","FICOSECO":"Federico"};
-const FECHA_CORTE="2026-07-01";   // inicio del período de seguimiento del resumen
+const FECHA_CORTE=new Date(2026,6,1);   // inicio del período de seguimiento del resumen (mes 6 = julio)
 
 function coberturaDe(gN,visitas){
   const asig=ASIGNACIONES[gN]||[];
@@ -462,7 +472,7 @@ function renderGestores(){
   const anios=aniosConVisitas();
   $("gestHead").innerHTML="<th>Gestor</th><th>Último mes</th><th>Último trimestre</th><th>Último semestre</th>"+
     anios.map(a=>`<th>Año ${a}</th>`).join("")+
-    "<th>Estaciones visitadas (${y})</th><th>Cobertura de asignadas</th>".replace("${y}",y);
+    "<th>Estaciones distintas (${y})</th><th>Cobertura de asignadas</th>".replace("${y}",y);
   const hace=n=>{const f=new Date(h);f.setDate(f.getDate()-n);return f;};
   const d30=hace(30), d90=hace(90), d180=hace(180);
   const nombres=DATA.gestores?DATA.gestores.map(g=>({n:norm(g.nombre),mat:g.mat})):
@@ -494,14 +504,36 @@ function renderGestores(){
   tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>—</td><td>—</td></tr>`);
   const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;}).map(v=>normEst(v.estacion))).size;
   $("statGlobal").textContent=`${T.ca} visitas en ${y} · ${estVisit} estaciones visitadas de 143 asignadas en la red`;
-  renderCorte(nombres);
+  renderDivisional(); renderCorte(nombres);
+}
+
+function renderDivisional(){
+  const tb=$("tDiv")&&$("tDiv").querySelector("tbody"); if(!tb)return;
+  tb.innerHTML="";
+  const h=hoy(), y=h.getFullYear();
+  const porDiv={};
+  listaEstaciones().forEach(e=>{
+    const vis=DATA.visitas.filter(v=>{const f=d(v.fecha);if(!f||f.getFullYear()!==y)return false;const vn=normEst(v.estacion);return vn.indexOf(e.k)===0||vn.indexOf(" "+e.k)>=0;});
+    const dv=porDiv[e.div]=porDiv[e.div]||{vis:0,est:0,asig:0};
+    dv.asig++;
+    dv.vis+=vis.length;
+    if(vis.length)dv.est++;
+  });
+  let TV=0,TE=0,TA=0;
+  Object.entries(porDiv).sort((a,b)=>b[1].vis-a[1].vis).forEach(([div,v])=>{
+    const pct=Math.round(v.est/v.asig*100);
+    const cls=pct>=70?"ok":pct>=35?"warn":"crit";
+    TV+=v.vis;TE+=v.est;TA+=v.asig;
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(div)}</b></td><td>${v.vis}</td><td>${v.est}</td><td>${v.asig}</td><td><span class="chip ${cls}">${pct}%</span></td></tr>`);
+  });
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total red</td><td>${TV}</td><td>${TE}</td><td>${TA}</td><td>${TA?Math.round(TE/TA*100)+"%":"—"}</td></tr>`);
 }
 
 function renderCorte(nombres){
   const tb=$("tCorte")&&$("tCorte").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
-  const corte=d(FECHA_CORTE);
-  $("tituloCorte").textContent="Resumen desde el "+fmt(corte);
+  const corte=FECHA_CORTE;
+  $("tituloCorte").textContent="Resumen desde el "+("0"+corte.getDate()).slice(-2)+"/"+("0"+(corte.getMonth()+1)).slice(-2)+"/"+corte.getFullYear();
   let TV=0;
   const filas=[];
   nombres.forEach(g=>{
