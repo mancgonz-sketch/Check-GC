@@ -111,7 +111,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
   <div class="card">
     <h2>Panel de Gestores — frecuencia de visitas</h2>
     <div id="statGlobal" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
-    <div class="tablewrap"><table id="tGestores">
+    <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tGestores">
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
@@ -237,7 +237,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
    y el mismo TOKEN definido en el script. Si queda vacío, el tablero muestra datos de ejemplo. */
-const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbxL2zckTV4F2CDoiBLh6F9Nr5G2GTDupUJO1dGHELcvAdHo-FN3lmMyaZX5HFmSrk8/exec" };  // pegar acá la URL /exec del Apps Script
+const CONFIG = { API_URL: "" };  // pegar acá la URL /exec del Apps Script
 /* La clave de acceso NO va en este archivo: es el TOKEN definido en el Apps Script.
    Se pide al entrar y queda guardada en el navegador de cada usuario. */
 let TOKEN = localStorage.getItem("gc_token") || "";
@@ -497,7 +497,7 @@ function renderGestores(){
     const nom=NOMBRES_GESTOR[g.n]?`${g.n}, ${NOMBRES_GESTOR[g.n]}`:g.n;
     T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;
     porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
-    filas.push({ord:ca*100+cm,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
+    filas.push({ord:(cob?cob.pct:-1)*10000+ca,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
       <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map(n=>`<td>${n}</td>`).join("")}<td>${distintas}</td><td>${cobCell}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
