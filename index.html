@@ -315,9 +315,9 @@ async function cargar(){
         $("lockClave").focus();
         return;
       }
-      DATA=DEMO; $("badgeFuente").textContent="DATOS DE EJEMPLO — sin conexión"; $("badgeFuente").className="badge demo";
+      DATA={...DEMO,visitas:[],observaciones:[],reclamos:[]}; $("badgeFuente").textContent="DATOS DE EJEMPLO — sin conexión"; $("badgeFuente").className="badge demo";
     }
-  }else{ DATA=DEMO; $("badgeFuente").textContent="DATOS DE EJEMPLO"; $("badgeFuente").className="badge demo"; }
+  }else{ DATA={...DEMO,visitas:[],observaciones:[],reclamos:[]}; $("badgeFuente").textContent="DATOS DE EJEMPLO"; $("badgeFuente").className="badge demo"; }
   $("fechaAct").textContent="Actualizado: "+fmt(DATA.actualizado);
   $("fGer").length=1;$("fEst").length=1;$("fGestor").length=1;
   poblarFiltros(); poblarEvol(); render(); renderEvol();
@@ -441,7 +441,7 @@ function renderEstaciones(){
     const cls=e.dias===null||e.dias>90?"crit":e.dias>45?"warn":"ok";
     const txt=e.dias===null?"NUNCA":e.dias+" días";
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(e.nombre)}</b></td><td>${esc(e.div)}</td><td>${e.gestores.join(" / ")}</td>
-      <td>${e.anio}</td><td>${e.tot}</td><td>${e.ult?fmt(e.ult):"—"}</td><td><span class="chip ${cls}">${txt}</span></td></tr>`);
+      <td>${e.anio}</td><td>${e.tot}</td><td>${e.ult?("0"+e.ult.getDate()).slice(-2)+"/"+("0"+(e.ult.getMonth()+1)).slice(-2)+"/"+e.ult.getFullYear():"—"}</td><td><span class="chip ${cls}">${txt}</span></td></tr>`);
   });
   if(!filas.length)tb.innerHTML='<tr><td colspan="7" style="color:var(--muted)">Sin resultados para ese filtro.</td></tr>';
   // poblar el filtro de gestor una sola vez
