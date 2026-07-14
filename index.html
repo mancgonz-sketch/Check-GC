@@ -428,7 +428,7 @@ function renderEstaciones(){
   const filas=listaEstaciones().map(e=>{
     const vis=DATA.visitas.filter(v=>{const vn=normEst(v.estacion);return vn.indexOf(e.k)===0||vn.indexOf(" "+e.k)>=0;});
     const anio=vis.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;});
-    const ult=vis.map(v=>d(v.fecha)).filter(Boolean).sort((a,b)=>b-a)[0];
+    const ult=vis.map(v=>d(v.fecha)).filter(f=>f&&!isNaN(f.getTime())&&f.getFullYear()>2000).sort((a,b)=>b-a)[0];
     const dias=ult?Math.round((h-ult)/86400000):null;
     return {...e,anio:anio.length,tot:vis.length,ult,dias};
   }).filter(e=>{
