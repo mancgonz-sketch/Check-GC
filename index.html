@@ -115,7 +115,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026: toda visita anterior queda fuera de todas las estadísticas. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
 
     <h2 style="margin-top:22px">Resumen por divisional — año en curso</h2>
     <div class="tablewrap"><table id="tDiv">
@@ -328,7 +328,7 @@ async function cargar(){
   if(CONFIG.API_URL){
     try{
       if(!TOKEN)throw new Error("clave");
-      DATA=await validarClave(TOKEN);
+      DATA=await validarClave(TOKEN); aplicarCorte();
       $("lockScreen").style.display="none";
       $("badgeFuente").textContent="DATOS EN VIVO"; $("badgeFuente").className="badge";
     }catch(e){
@@ -406,6 +406,21 @@ function aniosConChecks(){
 const norm=x=>String(x||"").trim().toUpperCase();
 const esDelGestor=(v,ape)=>{const g=norm(v.gestor);return g===ape||(!!g&&g.indexOf(ape)>=0);};
 const tieneCheck=v=>v.puntaje!==""&&v.puntaje!=null&&!isNaN(Number(v.puntaje));
+function aplicarCorte(){ if(DATA&&DATA.visitas) DATA.visitas=DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f>=FECHA_CORTE;}); }
+/* Asignación exclusiva: cada visita cuenta para UNA sola estación (la de mejor coincidencia). */
+function mapaVisitasPorEstacion(soloCheck){
+  const ests=listaEstaciones();
+  const mapa={}; ests.forEach(e=>mapa[e.k]=[]);
+  DATA.visitas.forEach(v=>{
+    if(soloCheck&&!tieneCheck(v))return;
+    if(!d(v.fecha))return;
+    const vn=normEst(v.estacion);
+    let mejor=null,mp=-1e9;
+    ests.forEach(e=>{ if(coincideEst(vn,e.k)){const p=puntajeMatch(vn,e.k); if(p>mp){mejor=e.k;mp=p;}} });
+    if(mejor)mapa[mejor].push(v);
+  });
+  return mapa;
+}
 const esBrom=v=>norm(v.tipo).indexOf("BROMAT")>=0;
 const tipoEspecial=v=>{
   const t=norm(v.tipo);
@@ -431,12 +446,22 @@ const ASIGNACIONES={
 };
 const sinAcentos=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const normEst=x=>sinAcentos(x).toUpperCase().replace(/[().]/g,"").replace(/-/g," ").replace(/\s+/g," ").trim();
-/* ¿La estación visitada (x) corresponde a la asignada (an)? Tolerante en ambos sentidos. */
+/* Matcheo por palabras significativas: descarta genéricas y exige inclusión de un lado en el otro. */
+const GENERICAS=new Set(["ESTACION","CAMINERA","CENTRO","SERVICIAL","PTO","DE","DEL","LA","EL","Y","ABASTEC","ABASTECIMIENTO","MOTEL","HOSTERIA","HOTEL","CAMPAMENTO","UNIDAD","TURISTICA","TURISTICO","US","CS","INMUEBLE","TALLERES","NAUTICO","FULL"]);
+const sigTokens=x=>normEst(x).split(" ").filter(t=>t&&!GENERICAS.has(t));
 const coincideEst=(x,an)=>{
-  if(!x||!an)return false;
-  if(x.indexOf(an)>=0||an.indexOf(x)>=0)return true;
-  const raiz=x.split(" ")[0];
-  return raiz.length>3&&an.indexOf(raiz)>=0;
+  const tv=sigTokens(x), ta=sigTokens(an);
+  if(!tv.length||!ta.length)return false;
+  const inc=(a,b)=>a.every(t=>b.indexOf(t)>=0);
+  return inc(tv,ta)||inc(ta,tv);
+};
+/* Puntaje de coincidencia: más tokens compartidos y menos sobrantes = mejor. */
+const puntajeMatch=(x,an)=>{
+  const tv=sigTokens(x), ta=sigTokens(an);
+  const comp=ta.filter(t=>tv.indexOf(t)>=0).length;
+  const v=normEst(x), a=normEst(an);
+  const bonus=(v.indexOf(a)===0||a.indexOf(v)===0)?3:0;   // prefijo exacto desempata (Santa Rosa vs Santa Rosa Centro)
+  return comp*10-(ta.length-comp)-(tv.length-comp)+bonus;
 };
 
 
@@ -464,8 +489,9 @@ function renderEstaciones(){
   const soloSin=$("soloSinVisita").checked;
   const h=hoy(), y=h.getFullYear();
   tb.innerHTML="";
+  const mapaV=mapaVisitasPorEstacion(true);
   const filas=listaEstaciones().map(e=>{
-    const vis=DATA.visitas.filter(v=>tieneCheck(v)&&coincideEst(normEst(v.estacion),e.k));
+    const vis=mapaV[e.k]||[];
     const anio=vis.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;});
     const ult=vis.map(v=>d(v.fecha)).filter(f=>f&&!isNaN(f.getTime())&&f.getFullYear()>2000).sort((a,b)=>b-a)[0];
     const dias=ult?Math.round((h-ult)/86400000):null;
@@ -494,8 +520,14 @@ const FECHA_CORTE=new Date(2026,6,1);   // inicio del período de seguimiento de
 function coberturaDe(gN,visitas){
   const asig=ASIGNACIONES[gN]||[];
   if(!asig.length)return null;
-  const vn=visitas.map(v=>normEst(v.estacion));
-  const cubiertas=asig.filter(a=>{const an=normEst(a);return vn.some(x=>coincideEst(x,an));}).length;
+  const marcadas=new Set();
+  visitas.forEach(v=>{
+    const vn=normEst(v.estacion);
+    let mejor=null,mp=-1e9;
+    asig.forEach(a=>{const an=normEst(a); if(coincideEst(vn,an)){const p=puntajeMatch(vn,an); if(p>mp){mejor=an;mp=p;}}});
+    if(mejor)marcadas.add(mejor);
+  });
+  const cubiertas=marcadas.size;
   return {cubiertas,total:asig.length,pct:Math.round(cubiertas/asig.length*100)};
 }
 
@@ -540,10 +572,10 @@ function renderGestores(){
     T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;T.sc+=sinCk;T.br+=brom;
     porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
     filas.push({ord:(cob?cob.pct:-1)*10000+ca,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
-      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map(n=>`<td>${n}</td>`).join("")}<td>${distintas}${brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td></tr>`});
+      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map((n,i)=>`<td>${n}${anios[i]===y&&brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td>`).join("")}<td>${distintas}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>—${T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td><td>${T.sc}</td><td>—</td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td></tr>`);
   const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y&&tieneCheck(v);}).map(v=>normEst(v.estacion))).size;
   $("statGlobal").textContent=`Medición desde el 01/07/2026 · ${T.ca} visitas en ${y} · ${estVisit} estaciones visitadas de 143 asignadas en la red`;
   renderDivisional(); renderCorte(nombres);
@@ -554,8 +586,9 @@ function renderDivisional(){
   tb.innerHTML="";
   const h=hoy(), y=h.getFullYear();
   const porDiv={};
+  const mapa=mapaVisitasPorEstacion(true);
   listaEstaciones().forEach(e=>{
-    const vis=DATA.visitas.filter(v=>{const f=d(v.fecha);if(!f||f.getFullYear()!==y)return false;if(!tieneCheck(v))return false;return coincideEst(normEst(v.estacion),e.k);});
+    const vis=(mapa[e.k]||[]).filter(v=>d(v.fecha).getFullYear()===y);
     const dv=porDiv[e.div]=porDiv[e.div]||{vis:0,est:0,asig:0};
     dv.asig++;
     dv.vis+=vis.length;
@@ -950,7 +983,7 @@ $("lockBtn").addEventListener("click",async()=>{
   if(!clave)return;
   $("lockMsg").textContent="Verificando…"; $("lockMsg").style.color="#6B7A8C";
   try{
-    DATA=await validarClave(clave);
+    DATA=await validarClave(clave); aplicarCorte();
     TOKEN=clave; localStorage.setItem("gc_token",clave);
     $("lockScreen").style.display="none";
     $("badgeFuente").textContent="DATOS EN VIVO"; $("badgeFuente").className="badge";
