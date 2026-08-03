@@ -44,6 +44,15 @@ main{max-width:1280px;margin:0 auto;padding:22px 20px 40px}
 .statchip.gold{border-top:3px solid var(--gold)}
 .statchip.warnc b{color:var(--warn)}
 
+/* ── botonera de consultas ── */
+#vistaNav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;position:sticky;top:54px;z-index:40;
+  background:var(--bg);padding:8px 0}
+.vbtn{font-family:Inter;font-size:12.5px;font-weight:650;padding:8px 16px;border-radius:999px;cursor:pointer;
+  border:1.5px solid var(--line);background:#fff;color:var(--navy2);transition:all .15s}
+.vbtn:hover{border-color:var(--navy3);color:var(--navy)}
+.vbtn.active{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+@media(max-width:700px){#vistaNav{top:46px;gap:6px}.vbtn{padding:7px 12px;font-size:11.5px}}
+
 /* ── tarjetas ── */
 .card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--line);padding:18px 20px;margin-bottom:20px}
 .card h2{font-size:13px;color:var(--navy);text-transform:uppercase;letter-spacing:.1em;font-weight:750;
@@ -115,6 +124,15 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
   </div>
 </header>
 <main>
+  <div id="statGlobal"></div>
+  <nav id="vistaNav" aria-label="Consultas">
+    <button data-vista="cardGestores" class="vbtn active">👥 Gestores</button>
+    <button data-vista="cardDiv" class="vbtn">🗺️ Divisionales</button>
+    <button data-vista="cardCorte" class="vbtn">📅 Desde el 1/7</button>
+    <button data-vista="cardResultados" class="vbtn">📈 Resultados</button>
+    <button data-vista="cardEstaciones" class="vbtn">⛽ Estaciones</button>
+    <button data-vista="todo" class="vbtn">☰ Ver todo</button>
+  </nav>
   <div class="kpis" style="display:none">
     <div class="kpi"><div class="v" id="kVisitas">–</div><div class="l">Checks del mes</div></div>
     <div class="kpi"><div class="v" id="kPuntaje">–</div><div class="l">Puntaje Check prom. (90 d)</div></div>
@@ -142,29 +160,35 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     </table></div>
   </div>
 
-  <div class="card">
+  <div class="card vista" id="cardGestores">
     <h2>Panel de Gestores — frecuencia de visitas</h2>
-    <div id="statGlobal" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
+
     <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tGestores">
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026: toda visita anterior queda fuera de todas las estadísticas. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
 
-    <h2 style="margin-top:22px">Resumen por divisional — año en curso</h2>
+  </div>
+
+  <div class="card vista" id="cardDiv">
+    <h2>Resumen por divisional — año en curso</h2>
     <div class="tablewrap"><table id="tDiv">
       <thead><tr><th>Divisional</th><th>Visitas (checks)</th><th>Estaciones distintas visitadas</th><th>Asignadas</th><th>Cobertura</th></tr></thead>
       <tbody></tbody>
     </table></div>
 
-    <h2 style="margin-top:22px" id="tituloCorte">Resumen desde el 1/7</h2>
+  </div>
+
+  <div class="card vista" id="cardCorte">
+    <h2 id="tituloCorte">Resumen desde el 1/7</h2>
     <div class="tablewrap"><table id="tCorte">
       <thead><tr><th>Gestor</th><th>Visitas</th><th>Estaciones distintas</th><th>% de sus asignadas</th></tr></thead>
       <tbody></tbody>
     </table></div>
   </div>
 
-  <div class="card">
+  <div class="card vista" id="cardResultados">
     <h2>Resultados por gestor — check a check</h2>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <select id="selGestorRes" style="padding:8px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px"><option value="">Elegí un gestor…</option></select>
@@ -177,7 +201,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Resultado del check en cada visita, en orden cronológico. Verde: 95% o más · Amarillo: 90–94,9% · Rojo: menos de 90% · "s/p": visita sin puntaje registrado.</p>
   </div>
 
-  <div class="card">
+  <div class="card vista" id="cardEstaciones">
     <h2>Estaciones — frecuencia de visita</h2>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <input id="buscaEst" placeholder="Buscar estación…" style="padding:8px 12px;border:1px solid #C9D4E4;border-radius:8px;font-size:13px;min-width:220px">
@@ -1035,6 +1059,14 @@ $("lockBtn").addEventListener("click",async()=>{
   }
 });
 $("lockClave").addEventListener("keydown",e=>{if(e.key==="Enter")$("lockBtn").click();});
+
+function setVista(v){
+  try{localStorage.setItem("gcVista",v);}catch(e){}
+  document.querySelectorAll(".vista").forEach(c=>c.style.display=(v==="todo"||c.id===v)?"":"none");
+  document.querySelectorAll(".vbtn").forEach(b=>b.classList.toggle("active",b.dataset.vista===v));
+}
+document.querySelectorAll(".vbtn").forEach(b=>b.addEventListener("click",()=>setVista(b.dataset.vista)));
+setVista((function(){try{return localStorage.getItem("gcVista")||"cardGestores";}catch(e){return "cardGestores";}})());
 
 $("selGestorRes").addEventListener("change",renderResultadosGestor);
 ["input","change"].forEach(ev=>{
