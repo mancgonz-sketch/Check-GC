@@ -115,7 +115,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. "Con check" = visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis); "Sin check" = email de visita sin el check. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
 
     <h2 style="margin-top:22px">Resumen por divisional — año en curso</h2>
     <div class="tablewrap"><table id="tDiv">
@@ -250,7 +250,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px}
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
    y el mismo TOKEN definido en el script. Si queda vacío, el tablero muestra datos de ejemplo. */
-const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbxL2zckTV4F2CDoiBLh6F9Nr5G2GTDupUJO1dGHELcvAdHo-FN3lmMyaZX5HFmSrk8/exec" };  // pegar acá la URL /exec del Apps Script
+const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbxL2zckTV4F2CDoiBLh6F9Nr5G2GTDupUJO1dGHELcvAdHo-FN3lmMyaZX5HFmSrk8/exec" };  // URL ya configurada — no tocar
 /* La clave de acceso NO va en este archivo: es el TOKEN definido en el Apps Script.
    Se pide al entrar y queda guardada en el navegador de cada usuario. */
 let TOKEN = localStorage.getItem("gc_token") || "";
@@ -405,6 +405,13 @@ function aniosConChecks(){
 
 const norm=x=>String(x||"").trim().toUpperCase();
 const esDelGestor=(v,ape)=>{const g=norm(v.gestor);return g===ape||(!!g&&g.indexOf(ape)>=0);};
+const esBrom=v=>norm(v.tipo).indexOf("BROMAT")>=0;
+const tipoEspecial=v=>{
+  const t=norm(v.tipo);
+  if(!t||t.indexOf("ESTACION")>=0||t.indexOf("PRESENCIAL")>=0||t.indexOf("SIN CHECK")>=0)return"";
+  if(t.indexOf("BROMAT")>=0)return"BROM.";
+  return t.replace("CHECK","").replace(/[()]/g,"").trim().substring(0,10)||"ESP.";
+};
 
 /* Asignaciones oficiales gestor -> dependencias (base APIES). CHIVILCOY excluida por cerrada. */
 const ASIGNACIONES={
@@ -503,12 +510,12 @@ function renderGestores(){
   const anios=aniosConVisitas();
   $("gestHead").innerHTML="<th>Gestor</th><th>Último mes</th><th>Último trimestre</th><th>Último semestre</th>"+
     anios.map(a=>`<th>Año ${a}</th>`).join("")+
-    "<th>Estaciones distintas (${y})</th><th>Cobertura de asignadas</th>".replace("${y}",y);
+    "<th>Estaciones distintas (${y})</th><th>Con check</th><th>Sin check</th><th>Cobertura de asignadas</th>".replace("${y}",y);
   const hace=n=>{const f=new Date(h);f.setDate(f.getDate()-n);return f;};
   const d30=hace(30), d90=hace(90), d180=hace(180);
   const nombres=DATA.gestores?DATA.gestores.map(g=>({n:norm(g.nombre),mat:g.mat})):
     [...new Set(DATA.visitas.map(v=>norm(v.gestor)).filter(Boolean))].map(n=>({n,mat:""}));
-  let T={cm:0,ct:0,cs:0,ca:0,anios:[]};
+  let T={cm:0,ct:0,cs:0,ca:0,cc:0,sc:0,br:0,anios:[]};
   const filas=[];
   nombres.forEach(g=>{
     const vis=DATA.visitas.filter(v=>esDelGestor(v,g.n)&&d(v.fecha));
@@ -519,6 +526,10 @@ function renderGestores(){
     const anio=vis.filter(v=>d(v.fecha).getFullYear()===y);
     const ca=anio.length;
     const distintas=new Set(anio.map(v=>normEst(v.estacion))).size;
+    const conCkL=anio.filter(v=>v.puntaje!==""&&v.puntaje!=null&&!isNaN(Number(v.puntaje)));
+    const conCk=conCkL.length;
+    const brom=conCkL.filter(esBrom).length;
+    const sinCk=ca-conCk;
     const cob=coberturaDe(g.n,anio);
     let cobCell="—";
     if(cob){
@@ -526,15 +537,15 @@ function renderGestores(){
       cobCell=`<span class="chip ${cls}">${cob.cubiertas}/${cob.total} · ${cob.pct}%</span>`;
     }
     const nom=NOMBRES_GESTOR[g.n]?`${g.n}, ${NOMBRES_GESTOR[g.n]}`:g.n;
-    T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;
+    T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;T.cc+=conCk;T.sc+=sinCk;T.br+=brom;
     porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
     filas.push({ord:(cob?cob.pct:-1)*10000+ca,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
-      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map(n=>`<td>${n}</td>`).join("")}<td>${distintas}</td><td>${cobCell}</td></tr>`});
+      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map(n=>`<td>${n}</td>`).join("")}<td>${distintas}</td><td>${conCk}${brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>—</td><td>—</td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>—</td><td>${T.cc}${T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td><td>${T.sc}</td><td>—</td></tr>`);
   const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;}).map(v=>normEst(v.estacion))).size;
-  $("statGlobal").textContent=`${T.ca} visitas en ${y} · ${estVisit} estaciones visitadas de 143 asignadas en la red`;
+  $("statGlobal").textContent=`Medición desde el 01/07/2026 · ${T.ca} visitas en ${y} · ${estVisit} estaciones visitadas de 143 asignadas en la red`;
   renderDivisional(); renderCorte(nombres);
 }
 
@@ -585,10 +596,12 @@ function renderResultadosGestor(){
   const celda=v=>{
     if(!v)return"<td>—</td>";
     const f=d(v.fecha), ftxt=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+String(f.getFullYear()).slice(-2);
-    if(v.puntaje===""||v.puntaje==null||isNaN(Number(v.puntaje)))return`<td><span class="chip" style="background:#EEF1F5;color:#6B7A8C">s/p</span><div style="font-size:10.5px;color:var(--muted)">${ftxt}</div></td>`;
+    const tag=tipoEspecial(v);
+    const tagHtml=tag?`<div style="font-size:9.5px;font-weight:700;color:var(--navy2);letter-spacing:.5px">${tag}</div>`:"";
+    if(v.puntaje===""||v.puntaje==null||isNaN(Number(v.puntaje)))return`<td><span class="chip" style="background:#EEF1F5;color:#6B7A8C">s/p</span><div style="font-size:10.5px;color:var(--muted)">${ftxt}</div>${tagHtml}</td>`;
     const p=Number(v.puntaje);
     const cls=p>=95?"ok":p>=90?"warn":"crit";
-    return`<td><span class="chip ${cls}">${p.toFixed(2)}%</span><div style="font-size:10.5px;color:var(--muted)">${ftxt}</div></td>`;
+    return`<td><span class="chip ${cls}">${p.toFixed(2)}%</span><div style="font-size:10.5px;color:var(--muted)">${ftxt}</div>${tagHtml}</td>`;
   };
   ests.forEach(([est,lista])=>{
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(est)}</b></td>`+Array.from({length:maxV},(_,i)=>celda(lista[i])).join("")+"</tr>");
