@@ -32,6 +32,8 @@ header h1 small{display:block;font-family:Inter;font-size:10.5px;font-weight:500
 #btnExportar{background:transparent;color:var(--gold);border:1.5px solid var(--gold);padding:6px 14px;border-radius:999px;
   font-weight:700;cursor:pointer;font-size:11.5px;font-family:Inter;transition:background .15s,color .15s}
 #btnExportar:hover{background:var(--gold);color:var(--navy)}
+#btnDemo{background:var(--gold);color:var(--navy);border:1.5px solid var(--gold);padding:6px 14px;border-radius:999px;font-weight:700;cursor:pointer;font-size:11.5px;font-family:Inter;transition:opacity .15s}
+#btnDemo:hover{opacity:.85}
 
 main{max-width:1280px;margin:0 auto;padding:22px 20px 40px}
 
@@ -120,6 +122,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <span class="badge" id="badgeFuente">CARGANDO…</span>
       <span style="font-size:11px;color:var(--steel)" id="hActualizado"></span>
       <button id="btnExportar">⬇ Excel</button>
+      <button id="btnDemo">📤 Compartir demo</button>
     </div>
   </div>
 </header>
@@ -305,13 +308,14 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 <footer></footer>
 
 <script>
+const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},d:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
    y el mismo TOKEN definido en el script. Si queda vacío, el tablero muestra datos de ejemplo. */
 const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbxL2zckTV4F2CDoiBLh6F9Nr5G2GTDupUJO1dGHELcvAdHo-FN3lmMyaZX5HFmSrk8/exec" };  // URL ya configurada — no tocar
 /* La clave de acceso NO va en este archivo: es el TOKEN definido en el Apps Script.
    Se pide al entrar y queda guardada en el navegador de cada usuario. */
-let TOKEN = localStorage.getItem("gc_token") || "";
+let TOKEN = LS.g("gc_token") || "";
 
 /* Maestro de dependencias — Listado de Concesionarios Vigentes junio 2026 */
 const DEPENDENCIAS=[{"d":"25 DE MAYO-ESTACION","g":"GD 7","c":"ALFERESIS S.R.L.","a":"ESTACIÓN"},{"d":"ACCESO NORTE 1-CENTRO SERVICIAL","g":"GD 71","c":"BERAVAL S.R.L.","a":"ESTACIÓN"},{"d":"ACCESO NORTE 2-","g":"GD 71","c":"BERACAR S.R.L.","a":"ESTACIÓN"},{"d":"ANILLACO-PTO.DE ABASTEC. Y HOSTERIA","g":"GD 1","c":"NARDINI S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"ARRECIFES-CAMINERA","g":"GD 71","c":"SERVICENTRO ARRECIFES S.R.L.","a":"ESTACIÓN"},{"d":"ASCOCHINGA-ESTACION","g":"GD 4","c":"CERROS S.R.L.","a":"ESTACIÓN"},{"d":"AUXILIO MECANICO CAP. Y GRAN BS.AS.","g":"GD 65","c":"ABREA Y VAZQUEZ S.R.L.","a":"AUXILIO"},{"d":"AVELLANEDA-ESTACION","g":"GD 71","c":"MARKET AVELLANEDA S.R.L.","a":"ESTACIÓN"},{"d":"BAHIA BLANCA-ESTACION","g":"GD 7","c":"CONDOR SERVICIOS S.R.L.","a":"ESTACIÓN + VARIOS"},{"d":"BAHIA DE LOS LOBOS-CENTRO TURISTICO","g":"GD 71","c":"SALVADOR MARIA TURISMO S.R.L.","a":"VARIOS"},{"d":"BARRACAS-ESTACION","g":"GD 71","c":"SERVI INTEGRAL SRL","a":"ESTACIÓN"},{"d":"BELGRANO-ESTACION","g":"GD 71","c":"BERACAR S.R.L.","a":"ESTACIÓN"},{"d":"BERNARDO DE IRIGOYEN-EST. Y MOTEL","g":"GD 3","c":"ERIKSEN Y CIA S.A.C.I.F.I.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"BOLIVAR-ESTACION","g":"GD 7","c":"EPDEB S.R.L.","a":"ESTACIÓN"},{"d":"CACHI-CAMINERA Y HOSTERIA","g":"GD 1","c":"GUAYACAN VIEJO S.R.L.","a":"ESTACIÓN"},{"d":"CAFAYATE-ESTACION","g":"GD 1","c":"SOL DEL VALLE S.R.L.","a":"ESTACIÓN"},{"d":"CALEU CALEU-ESTACION Y MOTEL","g":"GD 5","c":"CARLOS ANSALDO Y CIA. S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"CAMINO PARQUE DEL BUEN AYRE 1-EST.","g":"GD 71","c":"NORBAYRES S.R.L.","a":"ESTACIÓN"},{"d":"CAMINO PARQUE DEL BUEN AYRE 2-EST.","g":"GD 71","c":"NORBAYRES S.R.L.","a":"ESTACIÓN"},{"d":"CANALS-CAMINERA","g":"GD 4","c":"MAC S.R.L.","a":"ESTACIÓN"},{"d":"CARHUE-ESTACION","g":"GD 7","c":"ÑANDAY S.R.L.","a":"ESTACIÓN"},{"d":"CARMEN DE ARECO-CAMINERA","g":"GD 71","c":"SERVILUJAN COMBUSTIBLES S.A.","a":"ESTACIÓN"},{"d":"CATAMARCA","g":"GD 1","c":"TAKI S.R.L.","a":"ESTACIÓN"},{"d":"CERES-ESTACION","g":"GD 3","c":"CERES SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"CHASCOMUS (LAGUNA)-CENTRO TURISTICO","g":"GD 7","c":"SALVADOR MARIA TURISMO S.R.L.","a":"VARIOS"},{"d":"CHASCOMUS-ESTACION","g":"GD 7","c":"FORNETTI HERMANOS S.R.L.","a":"ESTACIÓN + VARIOS"},{"d":"CHEPES-CAMINERA Y MOTEL","g":"GD 1","c":"EL TREBOL S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"CHILECITO-HOTEL","g":"GD 1","c":"DANGUS S.R.L.","a":"ALOJAMIENTO"},{"d":"CHOELE CHOEL-ESTACION","g":"GD 5","c":"ROGELIO Y RUBEN S.R.L.","a":"ESTACIÓN"},{"d":"CHOELE CHOEL.MOTEL","g":"GD 5","c":"NAGER S.R.L.","a":"ALOJAMIENTO"},{"d":"CHOS MALAL-ESTACION","g":"GD 5","c":"CAYNES S.R.L.","a":"ESTACIÓN"},{"d":"CIPOLLETTI-ESTACION","g":"GD 5","c":"MUGARRI S.R.L.","a":"ESTACIÓN"},{"d":"CIPOLLETTI-MOTEL","g":"GD 5","c":"MUGARRI S.R.L.","a":"ALOJAMIENTO"},{"d":"CLAROMECO-CAMPAMENTO","g":"GD 7","c":"TERRAZAS CLAROMECO S.R.L.","a":"VARIOS"},{"d":"CLORINDA-ESTACION","g":"GD 3","c":"INCA SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"COLON - PTO. ABASTECIMIENTO","g":"GD 3","c":"VENCOL S.R.L.","a":"ESTACIÓN"},{"d":"COLONIA 25 DE MAYO-CAMINERA Y MOTEL","g":"GD 5","c":"SERVICIOS S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"COMODORO RIVADAVIA-ESTACION","g":"GD 65","c":"RUHEMAR S.R.L.","a":"AUXILIO"},{"d":"CONCORDIA-ESTACION","g":"GD 3","c":"LAS BANDERITAS S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"CONGRESO-OFICINA","g":"GD 71","c":"ABREA Y VAZQUEZ S.R.L.","a":"VARIOS"},{"d":"CORDOBA-CENTRO SERVICIAL","g":"GD 4","c":"MY BEIYET S.R.L.","a":"ESTACIÓN"},{"d":"CORDOBA-ESTACION","g":"GD 4","c":"ZAREK S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"CORDOBA-HOTEL","g":"GD 4","c":"LOS ABUELOS SERV.GASTR. S.R.L.","a":"VARIOS"},{"d":"CORRIENTES-ESTACION","g":"GD 3","c":"IRUPE SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"CURUZU CUATIA-ESTACION","g":"GD 3","c":"ALDUVEZ S.R.L.","a":"ESTACIÓN"},{"d":"DELTA NAUTICO-PTO.DE ABAST.","g":"GD 71","c":"FEDERICO BALOCCO E HIJO S.A.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"DOLORES-CENTRO SERVICIAL","g":"GD 7","c":"PUNTO MEDIO 210 S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"DON TORCUATO - UNIDAD SERVICIAL","g":"GD 71","c":"BARCANGEL S.R.L.","a":"ESTACIÓN"},{"d":"EL BOLSON-ESTACION","g":"GD 5","c":"RUTA 40 SUR S.R.L.","a":"ESTACIÓN"},{"d":"ELDORADO-ESTACION","g":"GD 3","c":"ZAMBRANO COMBUSTIBLES S.R.L.","a":"ESTACIÓN"},{"d":"ELDORADO-HOTEL","g":"GD 3","c":"CHE ROGA S.R.L.","a":"ALOJAMIENTO"},{"d":"ENCON-CAMINERA","g":"GD 4","c":"VAL VER S.R.L.","a":"ESTACIÓN"},{"d":"ESQUEL-ESTACION","g":"GD 2","c":"KUPAL SRL","a":"ESTACIÓN"},{"d":"FAMATINA-CAMINERA","g":"GD 1","c":"DANGUS S.R.L.","a":"ESTACIÓN"},{"d":"FIRMAT-CAMINERA","g":"GD 3","c":"LORAM SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"FLORES-ESTACION","g":"GD 71","c":"CAPOMO S.R.L.","a":"ESTACIÓN"},{"d":"FORMOSA-CENTRO SERVICIAL","g":"GD 3","c":"BARRIOS ALFREDO COMBUSTIBLES","a":"ESTACIÓN"},{"d":"GARAYALDE-CAMINERA","g":"GD 2","c":"SIMIAN S.R.L.","a":"ESTACIÓN"},{"d":"GOBERNADOR GORDILLO-CAMINERA","g":"GD 1","c":"EL TREBOL S.R.L.","a":"ESTACIÓN"},{"d":"GORCHS-CAMINERA","g":"GD 7","c":"ALFERESIS S.R.L.","a":"ESTACIÓN"},{"d":"GUALEGUAYCHU-ESTACION","g":"GD 3","c":"PALMAGUA S.R.L.","a":"ESTACIÓN"},{"d":"HUALFIN-CAMINERA","g":"GD 1","c":"ROYCA SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"HUMAHUACA-ESTACION","g":"GD 1","c":"BORJA S.R.L.","a":"ESTACIÓN"},{"d":"INGENIERO JUAREZ-CAMINERA Y MOTEL","g":"GD 3","c":"DIAZ SERVICIOS S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"INGENIERO MASCHWITZ-ESTACION","g":"GD 71","c":"GEAVAL SRL","a":"ESTACIÓN"},{"d":"ITA IBATE-CAMINERA","g":"GD 3","c":"BARRIOS A. COMBUSTIBLES S.R.L.","a":"ESTACIÓN"},{"d":"JACHAL-ESTACION","g":"GD 4","c":"MARDAN S.R.L.","a":"ESTACIÓN"},{"d":"LA FALDA-ESTACION","g":"GD 4","c":"LA CUARTA SA","a":"ESTACIÓN"},{"d":"LA PAZ-ESTACION","g":"GD 3","c":"SERVICIOS DEL LITORAL S.R.L.","a":"ESTACIÓN"},{"d":"LA PLATA-CENTRO SERVICIAL","g":"GD 71","c":"GALLO PRESTACIONES S.R.L.","a":"ESTACIÓN"},{"d":"LA PLATA-ESTACION","g":"GD 71","c":"BARCANGEL S.R.L.","a":"ESTACIÓN"},{"d":"LA QUIACA-ESTACION","g":"GD 1","c":"CONCESIONARIA NORTE S.R.L.","a":"ESTACIÓN"},{"d":"LA RIOJA-ESTACION","g":"GD 1","c":"SIEZ S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"LAGO MASCARDI-CAMINERA","g":"GD 5","c":"RUTA 40 SUR S.R.L.","a":"ESTACIÓN"},{"d":"LANUS-ESTACION","g":"GD 71","c":"SERVICIOS AL SUR S.R.L.","a":"ESTACIÓN"},{"d":"LAS FLORES-CAMINERA","g":"GD 4","c":"ML SAN JOSE S.R.L.","a":"ESTACIÓN"},{"d":"LAS GRUTAS-UNIDAD TURISTICA","g":"GD 2","c":"SERVICIOS S.R.L.","a":"ALOJAMIENTO"},{"d":"LINCOLN-ESTACION","g":"GD 7","c":"HMM S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"LOS ALTARES-CAMINERA Y MOTEL","g":"GD 2","c":"KUPAL S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"LOS MENUCOS-PTO.DE ABASTEC. Y MOTEL","g":"GD 5","c":"MOYMA S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"LUJAN-ESTACION","g":"GD 71","c":"ADEPARC S.R.L.","a":"ESTACIÓN + VARIOS"},{"d":"MAR DE AJO CAMPAMENTO","g":"GD 7","c":"COUADEAU-MOSQUEDA S.R.L.","a":"VARIOS"},{"d":"MAR DEL PLATA (BROWN)","g":"GD 7","c":"SILLET S.R.L.","a":"ESTACIÓN"},{"d":"MAR DEL PLATA/COLON-CTRO. SERVICIAL","g":"GD 7","c":"SILLET S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"MAR DEL PLATA/INDEPENDENCIA-ESTAC.","g":"GD 7","c":"NAMPA S.R.L.","a":"ESTACIÓN"},{"d":"MAR DEL PLATA/PTA.MOGOTES-BALNEARIO","g":"GD 7","c":"CAFE ROSABAYA S.A.","a":"VARIOS"},{"d":"MENDOZA-CENTRO SERVICIAL","g":"GD 4","c":"DARDO MARTINEZ S.R.L.","a":"ESTACIÓN"},{"d":"MENDOZA-ESTACION","g":"GD 4","c":"DARDO MARTINEZ S.R.L.","a":"VARIOS"},{"d":"MERCEDES-ESTACION","g":"GD 71","c":"SOCAT S.R.L.","a":"ESTACIÓN"},{"d":"MIRAMAR-ESTACION","g":"GD 7","c":"PRILIKA MIRAMAR S.R.L.","a":"ESTACIÓN"},{"d":"NECOCHEA-ESTACION","g":"GD 7","c":"SERVIMAR NECOCHEA S.R.L.","a":"ESTACIÓN"},{"d":"NEUQUEN-ESTACION","g":"GD 5","c":"COMBUSTIBLES Y SERVICIOS S.R.L","a":"AUXILIO + ESTACIÓN"},{"d":"OBERA-ESTACION","g":"GD 3","c":"SIVERE SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"OLIVOS-ESTACION","g":"GD 71","c":"LOMA OLIVOS S.R.L.","a":"ESTACIÓN"},{"d":"PALERMO-CENTRO SERVICIAL","g":"GD 71","c":"FOCBAR S.R.L.","a":"ESTACIÓN + VARIOS"},{"d":"PARANA-ESTACION","g":"GD 65","c":"GRINOVERO HNOS. S.R.L.","a":"AUXILIO"},{"d":"PASO DE JAMA-U.S. Y MOTEL","g":"GD 1","c":"FERMART S.R.L.","a":"ESTACIÓN"},{"d":"PASO DE LOS LIBRES-ESTACION","g":"GD 3","c":"DA SILVA HNOS. S.R.L.","a":"ESTACIÓN"},{"d":"PILAR - UNIDAD SERVICIAL","g":"GD 71","c":"SERVI INTEGRAL S.R.L.","a":"ESTACIÓN"},{"d":"POSADAS-ESTACION","g":"GD 3","c":"ZAMBRANO COMBUSTIBLES S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"PUERTO IGUAZU-UNIDAD SERVICIAL","g":"GD 3","c":"PETROVALLE S.A.","a":"ESTACIÓN"},{"d":"PUERTO PIRAMIDES-CAMINERA","g":"GD 2","c":"POLIN S.R.L.","a":"ESTACIÓN"},{"d":"PUERTO PIRAMIDES-HOSTERIA","g":"GD 2","c":"POLIN S.R.L.","a":"ALOJAMIENTO"},{"d":"PUNTA ALTA-ESTACION","g":"GD 7","c":"DE LOS ANDES SERVICIOS S.R.L.","a":"VARIOS"},{"d":"PUNTA CUEVAS-CAMPAMENTO","g":"GD 2","c":"COMP.TURIST.PUNTA CUEVAS S.R.L","a":"ALOJAMIENTO"},{"d":"RAFAELA-ESTACION","g":"GD 3","c":"BYJ COMBUSTIBLES S.R.L.","a":"ESTACIÓN"},{"d":"RESTAURANT PISO 10 - SEDE CENTRAL","g":"GD 71","c":"RESTAURANT PISO 10 S.R.L.","a":"VARIOS"},{"d":"RIO CUARTO-ESTACION","g":"GD 4","c":"MAC S.R.L.","a":"ESTACIÓN"},{"d":"RIO GALLEGOS-ESTACION","g":"GD 2","c":"LAS OLAS S.R.L.","a":"ESTACIÓN"},{"d":"RIO TALA - UNIDAD SERVICIAL","g":"GD 71","c":"GROSCAN S.R.L.","a":"ESTACIÓN"},{"d":"ROQUE SAENZ PEÑA-ESTACION","g":"GD 3","c":"D.S.H. SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"ROSARIO DE LA FRONTERA-ESTACION","g":"GD 1","c":"FRANMA S.R.L.","a":"ESTACIÓN"},{"d":"ROSARIO-ESTACION","g":"GD 65","c":"JOCAMI S.R.L.","a":"AUXILIO"},{"d":"RUFINO-ESTACION","g":"GD 3","c":"PLURISERVICIOS EL HONRADO SRL","a":"ESTACIÓN"},{"d":"SALTA-ESTACION","g":"GD 1","c":"NARDINI S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"SAMBOROMBON-CAMINERA","g":"GD 7","c":"KINEXUS S.R.L.","a":"ESTACIÓN"},{"d":"SAN ANTONIO DE LA PAZ-CAMINERA","g":"GD 1","c":"ARRIETA SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"SAN CARLOS DE BARILOCHE-ESTACION","g":"GD 65","c":"CELPA S.R.L.","a":"AUXILIO"},{"d":"SAN CAYETANO-ESTACION","g":"GD 7","c":"GRUPO CAPPELLI S.R.L.","a":"ESTACIÓN"},{"d":"SAN CLEMENTE DEL TUYU-CAMPAMENTO","g":"GD 7","c":"COUADEAU-MOSQUEDA S.R.L.","a":"VARIOS"},{"d":"SAN CLEMENTE DEL TUYU-ESTACION","g":"GD 7","c":"COUADEAU - MOSQUEDA S.R.L.","a":"ESTACIÓN + VARIOS"},{"d":"SAN FRANCISCO-PTO.DE ABASTECIMIENTO","g":"GD 4","c":"MOVIMIENTOS Y SERVICIOS S.A.","a":"ESTACIÓN"},{"d":"SAN JUAN-CENTRO SERVICIAL 113","g":"GD 65","c":"AM PRESTACIONES S.R.L.","a":"AUXILIO"},{"d":"SAN JUAN-ESTACION 67","g":"GD 4","c":"VUELTA PREVIA S.R.L.","a":"ESTACIÓN"},{"d":"SAN LUIS-ESTACION","g":"GD 4","c":"ANTOFA S.R.L.","a":"ESTACIÓN"},{"d":"SAN MARTIN DE LOS ANDES-CAMPAMENTO","g":"GD 5","c":"SERVICIOS S.R.L.","a":"ALOJAMIENTO"},{"d":"SAN MARTIN DE LOS ANDES-ESTACION","g":"GD 5","c":"AMENDOLARO CIA.SERVICIOS S.R.L","a":"ESTACIÓN"},{"d":"SAN MARTIN-CAMINERA","g":"GD 1","c":"SABER S.R.L.","a":"ESTACIÓN"},{"d":"SAN MIGUEL DE TUCUMAN-CTRO.SERVICIA","g":"GD 1","c":"ARRIETA SERVICIOS S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"SAN MIGUEL DE TUCUMAN-ESTACION","g":"GD 1","c":"ARRIETA SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"SAN NICOLAS-CAMINERA","g":"GD 71","c":"AYEBRAIN S.R.L.","a":"ESTACIÓN"},{"d":"SAN RAFAEL-ESTACION","g":"GD 4","c":"AM PRESTACIONES S.R.L.","a":"VARIOS"},{"d":"SAN SALVADOR DE JUJUY-ESTACION","g":"GD 1","c":"BRUMAFRA S.R.L.","a":"ESTACIÓN"},{"d":"SAN SEBASTIAN","g":"GD 2","c":"TIERRA DEL FUEGO SERVICIOS SRL","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"SANTA CLARA DEL MAR-CAMINERA","g":"GD 7","c":"CR88 S.A.","a":"ESTACIÓN"},{"d":"SANTA FE-ESTACION","g":"GD 3","c":"GIORIA Y CIA. S.R.L.","a":"ESTACIÓN"},{"d":"SANTA ROSA-ESTACION","g":"GD 5","c":"MACHIS S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"SANTA ROSA-PTO.DE ABASTEC. Y MOTEL","g":"GD 5","c":"MACHIS S.R.L.","a":"ESTACIÓN"},{"d":"SANTIAGO DEL ESTERO-ESTACION","g":"GD 4","c":"JOVI S.R.L.","a":"ESTACIÓN"},{"d":"SARMIENTO-CAMINERA","g":"GD 2","c":"LA GERMANIA S.R.L.","a":"ESTACIÓN"},{"d":"SEDE CENTRAL-ESTACION","g":"GD 71","c":"AUTONAVI S.R.L.","a":"ESTACIÓN"},{"d":"SIERRA GRANDE-CAMINERA","g":"GD 2","c":"LA GERMANIA S.R.L.","a":"ESTACIÓN"},{"d":"SUSANA - UNIDAD SERVICIAL","g":"GD 3","c":"SERVICIOS DEL LITORAL S.R.L.","a":"ESTACIÓN"},{"d":"TACO POZO-CAMINERA","g":"GD 1","c":"FRANMA S.R.L.","a":"ESTACIÓN"},{"d":"TAFI DEL VALLE-HOSTERIA","g":"GD 1","c":"MAN SERVICIOS S.R.L.","a":"ALOJAMIENTO"},{"d":"TANDIL-ESTACION","g":"GD 7","c":"G.V.C. S.R.L.","a":"AUXILIO + ESTACIÓN + VARIOS"},{"d":"TARTAGAL-ESTACION","g":"GD 1","c":"COMBUSTIBLES DEL NORTE S.A.","a":"ESTACIÓN"},{"d":"TERMAS DE RIO HONDO-CTRO. TURISTICO","g":"GD 4","c":"STRH S.A.","a":"VARIOS"},{"d":"TIMBUES-CENTRO TURISTICO","g":"GD 3","c":"ADMINISTRACION LA RIBERA S.R.L","a":"ALOJAMIENTO"},{"d":"TINOGASTA-ESTACION","g":"GD 1","c":"PALMAGUA S.R.L.","a":"ESTACIÓN"},{"d":"TORTUGAS-CAMINERA","g":"GD 3","c":"MONCAYO S.R.L.","a":"ESTACIÓN"},{"d":"TRELEW-ESTACION","g":"GD 2","c":"SIMIAN S.R.L.","a":"AUXILIO + ESTACIÓN"},{"d":"TRENQUE LAUQUEN - UNIDAD SERVICIAL","g":"GD 7","c":"HMM S.R.L","a":"ESTACIÓN"},{"d":"TRES ARROYOS-ESTACION","g":"GD 7","c":"DE LOS ANDES SERVICIOS S.R.L.","a":"VARIOS"},{"d":"USHUAIA-UNIDAD SERVICIAL","g":"GD 2","c":"CORREDOR A.M.P. SRL","a":"AUXILIO + ESTACIÓN"},{"d":"VALLE FERTIL-ESTACION","g":"GD 4","c":"PAOLINI E HIJOS S.R.L.","a":"ESTACIÓN"},{"d":"VENADO TUERTO-ESTACION","g":"GD 3","c":"PLURISERVICIOS EL HONRADO SRL","a":"ESTACIÓN"},{"d":"VIEDMA-ESTACION","g":"GD 2","c":"KAUQUE S.R.L.","a":"ESTACIÓN"},{"d":"VILLA ALBERDI-CAMINERA","g":"GD 1","c":"SERVICIOS DEL PLATA S.R.L.","a":"ESTACIÓN"},{"d":"VILLA BORDEU-PTO.DE ABASTEC.Y MOTEL","g":"GD 7","c":"AROS DE PLATA S.R.L.","a":"ESTACIÓN"},{"d":"VILLA CARLOS PAZ-ESTACION","g":"GD 4","c":"RUTAS SERRANAS S.R.L.","a":"ESTACIÓN"},{"d":"VILLA DEL DIQUE-CAMINERA","g":"GD 4","c":"AM CELTA SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"VILLA DEVOTO-ESTACION","g":"GD 71","c":"GUNTER GIPSIE S.R.L.","a":"ESTACIÓN"},{"d":"VILLA GESELL-ESTACION","g":"GD 7","c":"B-6 S.A.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"VILLA LA ANGOSTURA-ESTACION","g":"GD 5","c":"MUGARRI S.R.L.","a":"ALOJAMIENTO + ESTACIÓN"},{"d":"VILLA LA PAZ-CAMINERA","g":"GD 4","c":"DARDO MARTINEZ S.R.L.","a":"ESTACIÓN"},{"d":"VILLA MARIA-ESTACION","g":"GD 4","c":"IKIGAI SERVICIOS S.R.L.","a":"ESTACIÓN"},{"d":"VILLA MERCEDES-CAMINERA 122","g":"GD 4","c":"COPETRO S.R.L.","a":"ESTACIÓN"},{"d":"VILLA MERCEDES-ESTACION 28","g":"GD 4","c":"HUGO ALBERTO ARNABOLDI S.R.L.","a":"ESTACIÓN"},{"d":"VILLA OJO DE AGUA-CAMINERA","g":"GD 4","c":"MY BEIYET S.R.L.","a":"ESTACIÓN"},{"d":"ZAPALA-ESTACION","g":"GD 5","c":"NAGER S.R.L.","a":"ESTACIÓN"}];
@@ -658,7 +662,7 @@ function renderDivisional(){
     if(vis.length)dv.est++;
   });
   let TV=0,TE=0,TA=0;
-  Object.entries(porDiv).sort((a,b)=>b[1].vis-a[1].vis).forEach(([div,v])=>{
+  Object.entries(porDiv).sort((a,b)=>(b[1].est/b[1].asig)-(a[1].est/a[1].asig)||b[1].vis-a[1].vis).forEach(([div,v])=>{
     const pct=Math.round(v.est/v.asig*100);
     const cls=pct>=70?"ok":pct>=35?"warn":"crit";
     TV+=v.vis;TE+=v.est;TA+=v.asig;
@@ -783,7 +787,7 @@ function renderSemaforo(){
   tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total red</td><td>—</td><td>—</td><td>${T.cm}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}</td>`).join("")}<td>${T.pN?(T.pS/T.pN).toFixed(1)+"%":"—"}</td><td>${T.oa}</td><td>${T.ov}</td><td>${T.ra}</td><td><span class="sem ${semT[1]}">${semT[0]}</span></td></tr>`);
 }
 
-function graf(id,tipo,labels,data,colores,opts={}){
+function graf(id,tipo,labels,data,colores,opts={}){ if(typeof Chart==="undefined")return;
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart($(id),{type:tipo,data:{labels,datasets:Array.isArray(data[0])?
     data.map((d,i)=>({label:opts.series?.[i]||"",data:d,backgroundColor:colores[i]})):
@@ -1069,7 +1073,7 @@ $("lockBtn").addEventListener("click",async()=>{
   $("lockMsg").textContent="Verificando…"; $("lockMsg").style.color="#6B7A8C";
   try{
     DATA=await validarClave(clave); aplicarCorte();
-    TOKEN=clave; localStorage.setItem("gc_token",clave);
+    TOKEN=clave; LS.s("gc_token",clave);
     $("lockScreen").style.display="none";
     $("badgeFuente").textContent="DATOS EN VIVO"; $("badgeFuente").className="badge";
     $("hActualizado").textContent="Actualizado: "+fmt(DATA.actualizado);
@@ -1083,12 +1087,12 @@ $("lockBtn").addEventListener("click",async()=>{
 $("lockClave").addEventListener("keydown",e=>{if(e.key==="Enter")$("lockBtn").click();});
 
 function setVista(v){
-  try{localStorage.setItem("gcVista",v);}catch(e){}
+  try{LS.s("gcVista",v);}catch(e){}
   document.querySelectorAll(".vista").forEach(c=>c.style.display=(v==="todo"||c.id===v)?"":"none");
   document.querySelectorAll(".vbtn").forEach(b=>b.classList.toggle("active",b.dataset.vista===v));
 }
 document.querySelectorAll(".vbtn").forEach(b=>b.addEventListener("click",()=>setVista(b.dataset.vista)));
-setVista((function(){try{return localStorage.getItem("gcVista")||"cardGestores";}catch(e){return "cardGestores";}})());
+setVista((function(){try{return LS.g("gcVista")||"cardGestores";}catch(e){return "cardGestores";}})());
 
 $("selGestorRes").addEventListener("change",renderResultadosGestor);
 ["input","change"].forEach(ev=>{
@@ -1097,7 +1101,34 @@ $("selGestorRes").addEventListener("change",renderResultadosGestor);
   $("soloSinVisita").addEventListener(ev,renderEstaciones);
 });
 
-$("btnExportar").addEventListener("click",()=>{
+function generarDemoHTML(){
+  let src="<!DOCTYPE html>\n"+document.documentElement.outerHTML;
+  // desconectar del servidor: el archivo no pide clave ni consulta nada
+  src=src.replace(/const CONFIG = \{ API_URL: "[^"]*" \}/,'const CONFIG = { API_URL: "" }');
+  // incrustar los datos actuales donde el modo demo los buscaría
+  // (patrones concatenados: si fueran literales, el generador se reemplazaría a sí mismo)
+  const j=JSON.stringify(DATA).replace(/<\//g,"<\\/");
+  const patData="DATA={..."+"DEMO,visitas:[],observaciones:[],reclamos:[]}";
+  src=src.split(patData).join("DATA="+j);
+  const f=new Date(), sello=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+" "+("0"+f.getHours()).slice(-2)+":"+("0"+f.getMinutes()).slice(-2);
+  // la copia nunca muestra la pantalla de clave (no la necesita)
+  src=src.replace(/(id="lockScreen"[^>]*?display:)\s*flex/,"$1none");
+  const patDemo1='"DATOS DE '+'EJEMPLO — sin conexión"', patDemo2='"DATOS DE '+'EJEMPLO"';
+  src=src.split(patDemo1).join('"COPIA · '+sello+'"');
+  src=src.split(patDemo2).join('"COPIA · '+sello+'"');
+  return src;
+}
+$("btnDemo").addEventListener("click",()=>{
+  if(!confirm("Se genera un archivo con los datos ACTUALES del tablero, que se abre sin clave.\n¿Continuar?"))return;
+  const blob=new Blob([generarDemoHTML()],{type:"text/html;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  const f=new Date();
+  a.download="CheckGC_demo_"+f.getFullYear()+("0"+(f.getMonth()+1)).slice(-2)+("0"+f.getDate()).slice(-2)+".html";
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+$("btnExportar").addEventListener("click",()=>{ if(typeof XLSX==="undefined"){alert("La exportación a Excel requiere conexión a internet.");return;}
   const maestro=DATA.dependencias||DEPENDENCIAS;
   const y=hoy().getFullYear();
   const wb=XLSX.utils.book_new();
