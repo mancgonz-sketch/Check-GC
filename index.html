@@ -686,7 +686,9 @@ function renderResultadosGestor(){
   vis.forEach(v=>{(por[v.estacion]=por[v.estacion]||[]).push(v);});
   const ests=Object.entries(por).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
   if(!ests.length){$("resGestorInfo").textContent="Sin visitas cargadas.";tb.innerHTML='<tr><td style="color:var(--muted)">Este gestor todavía no tiene checks en el sistema.</td></tr>';return;}
-  const maxV=Math.max(...ests.map(e=>e[1].length));
+  const MESES_L=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const claveMes=v=>{const f=d(v.fecha);return f.getFullYear()*100+f.getMonth();};
+  const meses=[...new Set(vis.map(claveMes))].sort((a,b)=>a-b);
   const conP=vis.filter(tieneCheck);
   const gen=conP.filter(v=>!esBrom(v)), br=conP.filter(esBrom);
   const avg=l=>l.length?(l.reduce((t,v)=>t+Number(v.puntaje),0)/l.length):null;
@@ -696,7 +698,7 @@ function renderResultadosGestor(){
   else if(pg!==null)proms=` · Promedio: ${pg.toFixed(2)}%`;
   else if(pb!==null)proms=` · Prom. Bromatología: ${pb.toFixed(2)}%`;
   $("resGestorInfo").textContent=`${vis.length} visitas · ${ests.length} estaciones${proms}`;
-  head.innerHTML="<th>Estación</th>"+Array.from({length:maxV},(_,i)=>`<th>Visita ${i+1}</th>`).join("")+"<th>Promedio</th>";
+  head.innerHTML="<th>Estación</th>"+meses.map(m=>`<th>${MESES_L[m%100]} ${Math.floor(m/100)}</th>`).join("")+"<th>Promedio</th>";
   const celda=v=>{
     if(!v)return"<td>—</td>";
     const f=d(v.fecha), ftxt=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+String(f.getFullYear()).slice(-2);
@@ -715,7 +717,12 @@ function renderResultadosGestor(){
       const cls=p>=95?"ok":p>=90?"warn":"crit";
       promCell=`<td><span class="chip ${cls}" style="font-weight:750">${p.toFixed(2)}%</span></td>`;
     }
-    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(est)}</b></td>`+Array.from({length:maxV},(_,i)=>celda(lista[i])).join("")+promCell+"</tr>");
+    const celdaMes=m=>{
+      const del=lista.filter(v=>claveMes(v)===m);
+      if(!del.length)return"<td>—</td>";
+      return"<td>"+del.map(v=>celda(v).replace(/^<td>|<\/td>$/g,"")).join('<div style="height:5px"></div>')+"</td>";
+    };
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(est)}</b></td>`+meses.map(celdaMes).join("")+promCell+"</tr>");
   });
 }
 
