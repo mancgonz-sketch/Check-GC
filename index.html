@@ -215,6 +215,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <tbody></tbody>
     </table></div>
     <h2 style="margin-top:6px">Detalle</h2>
+    <div style="margin-bottom:10px"><select id="filtroGestorCap"><option value="">Todos los gestores</option></select></div>
     <div class="tablewrap" style="max-height:420px"><table id="tCapacitaciones">
       <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Tema</th><th>Asistentes</th><th>Detalle</th></tr></thead>
       <tbody></tbody>
@@ -780,7 +781,12 @@ function renderCapacitaciones(){
   });
   const T=Object.values(stats).reduce((a,e)=>({d:a.d+e.d,f:a.f+e.f,r:a.r+e.r,p:a.p+e.p,pers:a.pers+e.pers}),{d:0,f:0,r:0,p:0,pers:0});
   tbR.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.d}</td><td>${T.f}</td><td>${T.r}</td><td>${T.pers||"—"}</td><td>${T.p}</td></tr>`);
-  [...pend,...dictadas].forEach(x=>{
+  const sel=$("filtroGestorCap");
+  const gestoresCap=[...new Set(caps.map(x=>norm(x.gestor)||"S/D"))].sort();
+  const elegido=sel.value;
+  sel.innerHTML='<option value="">Todos los gestores</option>'+gestoresCap.map(g=>`<option value="${esc(g)}"${g===elegido?" selected":""}>${esc(g)}</option>`).join("");
+  const detalleCaps=[...pend,...dictadas].filter(x=>!sel.value||(norm(x.gestor)||"S/D")===sel.value);
+  detalleCaps.forEach(x=>{
     const f=d(x.fecha), ftxt=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();
     const p=esPend(x);
     tb.insertAdjacentHTML("beforeend",`<tr${p?' style="background:var(--warn-bg)"':''}><td>${ftxt}</td><td><b>${esc(x.estacion)}</b></td><td>${esc(norm(x.gestor))}</td><td>${p?'<span class="chip warn">PENDIENTE</span> ':''}${esc(x.tema||"—")}</td><td>${esc(x.asistentes||"—")}</td><td style="max-width:340px">${esc(p?String(x.detalle).replace(/^PENDIENTE:\s*/i,""):x.detalle||"")}</td></tr>`);
@@ -1152,6 +1158,7 @@ document.querySelectorAll(".vbtn").forEach(b=>b.addEventListener("click",()=>set
 setVista((function(){try{return LS.g("gcVista")||"cardGestores";}catch(e){return "cardGestores";}})());
 
 $("selGestorRes").addEventListener("change",renderResultadosGestor);
+$("filtroGestorCap").addEventListener("change",renderCapacitaciones);
 ["input","change"].forEach(ev=>{
   $("buscaEst").addEventListener(ev,renderEstaciones);
   $("filtroGestorEst").addEventListener(ev,renderEstaciones);
