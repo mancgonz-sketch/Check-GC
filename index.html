@@ -103,6 +103,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 #tCorte td:not(:first-child),#tCorte th:not(:first-child),
 #tDiv td:not(:first-child),#tDiv th:not(:first-child),
 #tEstaciones td:nth-child(n+4),#tEstaciones th:nth-child(n+4){text-align:center}
+#tCapacitaciones td:nth-child(5),#tCapacitaciones th:nth-child(5){text-align:center}
 </style>
 </head>
 <body>
@@ -134,6 +135,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <button data-vista="cardCorte" class="vbtn">📅 Desde el 1/7</button>
     <button data-vista="cardResultados" class="vbtn">📈 Resultados</button>
     <button data-vista="cardEstaciones" class="vbtn">⛽ Estaciones</button>
+    <button data-vista="cardCapacitaciones" class="vbtn">🎓 Capacitaciones</button>
     <button data-vista="todo" class="vbtn">☰ Ver todo</button>
   </nav>
   <div class="kpis" style="display:none">
@@ -202,6 +204,16 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <tbody></tbody>
     </table></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Resultado del check en cada visita, en orden cronológico. Verde: 95% o más · Amarillo: 90–94,9% · Rojo: menos de 90% · "s/p": visita sin puntaje registrado.</p>
+  </div>
+
+  <div class="card vista" id="cardCapacitaciones">
+    <h2>Capacitaciones dictadas</h2>
+    <div id="capInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
+    <div class="tablewrap" style="max-height:420px"><table id="tCapacitaciones">
+      <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Tema</th><th>Asistentes</th><th>Detalle</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Se registran desde los emails: dictadas (con planilla o descritas en el cuerpo) y PENDIENTES (formación señalada como faltante — deuda del gestor, resaltada en ámbar arriba). Sin corte de fecha. No cuentan como visita con check.</p>
   </div>
 
   <div class="card vista" id="cardEstaciones">
@@ -457,7 +469,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderGestores(); renderEstaciones(); renderResultadosGestor();
+  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones();
 }
 
 function aniosConChecks(){
@@ -727,6 +739,29 @@ function renderResultadosGestor(){
       return"<td>"+del.map(v=>celda(v).replace(/^<td>|<\/td>$/g,"")).join('<div style="height:5px"></div>')+"</td>";
     };
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(est)}</b></td>`+meses.map(celdaMes).join("")+promCell+"</tr>");
+  });
+}
+
+function renderCapacitaciones(){
+  const tb=$("tCapacitaciones")&&$("tCapacitaciones").querySelector("tbody"); if(!tb)return;
+  tb.innerHTML="";
+  const caps=(DATA.capacitaciones||[]).filter(x=>d(x.fecha))
+    .sort((a,b)=>d(b.fecha)-d(a.fecha));
+  if(!caps.length){
+    $("capInfo").textContent="";
+    tb.innerHTML='<tr><td colspan="6" class="empty">Todavía no hay capacitaciones registradas. Cuando un gestor envíe un email con su capacitación adjunta, aparece acá.</td></tr>';
+    return;
+  }
+  const esPend=x=>String(x.detalle||"").toUpperCase().indexOf("PENDIENTE")===0;
+  const dictadas=caps.filter(x=>!esPend(x)), pend=caps.filter(esPend);
+  const porGestor={};
+  dictadas.forEach(x=>{const g=norm(x.gestor)||"S/D";porGestor[g]=(porGestor[g]||0)+1;});
+  $("capInfo").innerHTML=`<b>${dictadas.length}</b> dictadas`+(pend.length?` · <span class="chip warn">${pend.length} pendientes</span>`:"")+
+    (dictadas.length?" · "+Object.entries(porGestor).sort((a,b)=>b[1]-a[1]).map(([g,n])=>`${g}: ${n}`).join(" · "):"");
+  [...pend,...dictadas].forEach(x=>{
+    const f=d(x.fecha), ftxt=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();
+    const p=esPend(x);
+    tb.insertAdjacentHTML("beforeend",`<tr${p?' style="background:var(--warn-bg)"':''}><td>${ftxt}</td><td><b>${esc(x.estacion)}</b></td><td>${esc(norm(x.gestor))}</td><td>${p?'<span class="chip warn">PENDIENTE</span> ':''}${esc(x.tema||"—")}</td><td>${esc(x.asistentes||"—")}</td><td style="max-width:340px">${esc(p?String(x.detalle).replace(/^PENDIENTE:\s*/i,""):x.detalle||"")}</td></tr>`);
   });
 }
 
