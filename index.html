@@ -104,6 +104,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 #tDiv td:not(:first-child),#tDiv th:not(:first-child),
 #tEstaciones td:nth-child(n+4),#tEstaciones th:nth-child(n+4){text-align:center}
 #tCapacitaciones td:nth-child(5),#tCapacitaciones th:nth-child(5){text-align:center}
+#tCapResumen td:not(:first-child),#tCapResumen th:not(:first-child){text-align:center}
 </style>
 </head>
 <body>
@@ -209,6 +210,11 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
   <div class="card vista" id="cardCapacitaciones">
     <h2>Capacitaciones dictadas</h2>
     <div id="capInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
+    <div class="tablewrap" style="max-height:300px;margin-bottom:14px"><table id="tCapResumen">
+      <thead><tr><th>Gestor</th><th>Dictadas</th><th>Formales (planilla)</th><th>Refuerzos en visita</th><th>Personas capacitadas</th><th>Pendientes</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <h2 style="margin-top:6px">Detalle</h2>
     <div class="tablewrap" style="max-height:420px"><table id="tCapacitaciones">
       <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Tema</th><th>Asistentes</th><th>Detalle</th></tr></thead>
       <tbody></tbody>
@@ -753,11 +759,27 @@ function renderCapacitaciones(){
     return;
   }
   const esPend=x=>String(x.detalle||"").toUpperCase().indexOf("PENDIENTE")===0;
+  const esFormal=x=>String(x.detalle||"").toUpperCase().indexOf("FORMAL")===0;
   const dictadas=caps.filter(x=>!esPend(x)), pend=caps.filter(esPend);
-  const porGestor={};
-  dictadas.forEach(x=>{const g=norm(x.gestor)||"S/D";porGestor[g]=(porGestor[g]||0)+1;});
-  $("capInfo").innerHTML=`<b>${dictadas.length}</b> dictadas`+(pend.length?` · <span class="chip warn">${pend.length} pendientes</span>`:"")+
-    (dictadas.length?" · "+Object.entries(porGestor).sort((a,b)=>b[1]-a[1]).map(([g,n])=>`${g}: ${n}`).join(" · "):"");
+  $("capInfo").innerHTML=`<b>${dictadas.length}</b> capacitaciones dictadas`+(pend.length?` · <span class="chip warn">${pend.length} pendientes</span>`:"");
+  // ── estadística por gestor ──
+  const stats={};
+  const st=g=>stats[g]=stats[g]||{d:0,f:0,r:0,p:0,pers:0};
+  caps.forEach(x=>{
+    const g=norm(x.gestor)||"S/D", e=st(g);
+    if(esPend(x)){e.p++;return;}
+    e.d++;
+    if(esFormal(x))e.f++;else e.r++;
+    const n=parseInt(String(x.asistentes||"").match(/\d+/)||"");
+    if(!isNaN(n))e.pers+=n;
+  });
+  const tbR=$("tCapResumen").querySelector("tbody");
+  tbR.innerHTML="";
+  Object.entries(stats).sort((a,b)=>b[1].d-a[1].d||b[1].pers-a[1].pers).forEach(([g,e])=>{
+    tbR.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td><td>${e.d}</td><td>${e.f}</td><td>${e.r}</td><td>${e.pers||"—"}</td><td>${e.p?`<span class="chip warn">${e.p}</span>`:0}</td></tr>`);
+  });
+  const T=Object.values(stats).reduce((a,e)=>({d:a.d+e.d,f:a.f+e.f,r:a.r+e.r,p:a.p+e.p,pers:a.pers+e.pers}),{d:0,f:0,r:0,p:0,pers:0});
+  tbR.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.d}</td><td>${T.f}</td><td>${T.r}</td><td>${T.pers||"—"}</td><td>${T.p}</td></tr>`);
   [...pend,...dictadas].forEach(x=>{
     const f=d(x.fecha), ftxt=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();
     const p=esPend(x);
