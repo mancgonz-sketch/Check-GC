@@ -105,6 +105,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 #tEstaciones td:nth-child(n+4),#tEstaciones th:nth-child(n+4){text-align:center}
 #tCapacitaciones td:nth-child(5),#tCapacitaciones th:nth-child(5){text-align:center}
 #tCapResumen td:not(:first-child),#tCapResumen th:not(:first-child){text-align:center}
+#tCapEst td:nth-child(n+4),#tCapEst th:nth-child(n+4){text-align:center}
 </style>
 </head>
 <body>
@@ -211,13 +212,19 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <h2>Capacitaciones dictadas</h2>
     <div id="capInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
     <div class="tablewrap" style="max-height:300px;margin-bottom:14px"><table id="tCapResumen">
-      <thead><tr><th>Gestor</th><th>Dictadas</th><th>Formales (planilla)</th><th>Refuerzos en visita</th><th>Personas capacitadas</th><th>Pendientes</th></tr></thead>
+      <thead><tr><th>Gestor</th><th>Dictadas</th><th>Formales (planilla)</th><th>Refuerzos en visita</th><th>Personas capacitadas</th><th>Futuras propias</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <h2 style="margin-top:6px">Por estación</h2>
+    <div style="margin-bottom:8px;font-size:12px"><label><input type="checkbox" id="soloCapacitadas" checked> Solo capacitadas</label> <span id="capEstInfo" style="color:var(--muted);margin-left:10px"></span></div>
+    <div class="tablewrap" style="max-height:300px;margin-bottom:14px"><table id="tCapEst">
+      <thead><tr><th>Estación</th><th>Divisional</th><th>Gestor asignado</th><th>¿Capacitada?</th><th>Veces</th><th>Última</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <h2 style="margin-top:6px">Detalle</h2>
     <div style="margin-bottom:10px"><select id="filtroGestorCap"><option value="">Todos los gestores</option></select></div>
     <div class="tablewrap" style="max-height:420px"><table id="tCapacitaciones">
-      <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Tema</th><th>Asistentes</th><th>Detalle</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Temas vistos</th><th>Asistentes</th><th>Modalidad</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Se registran desde los emails: dictadas (con planilla o descritas en el cuerpo) y PENDIENTES (formación señalada como faltante — deuda del gestor, resaltada en ámbar arriba). Sin corte de fecha. No cuentan como visita con check.</p>
@@ -486,6 +493,7 @@ function aniosConChecks(){
 
 const norm=x=>String(x||"").trim().toUpperCase();
 const esDelGestor=(v,ape)=>{const g=norm(v.gestor);return g===ape||(!!g&&g.indexOf(ape)>=0);};
+const fechaISO=x=>{const f=d(x);return f?f.getFullYear()+"-"+("0"+(f.getMonth()+1)).slice(-2)+"-"+("0"+f.getDate()).slice(-2):"";};
 const tieneCheck=v=>v.puntaje!==""&&v.puntaje!=null&&!isNaN(Number(v.puntaje));
 function aplicarCorte(){ if(DATA&&DATA.visitas) DATA.visitas=DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f>=FECHA_CORTE;}); }
 /* Asignación exclusiva: cada visita cuenta para UNA sola estación (la de mejor coincidencia). */
@@ -762,18 +770,35 @@ function renderCapacitaciones(){
   const esPend=x=>String(x.detalle||"").toUpperCase().indexOf("PENDIENTE")===0;
   const esFormal=x=>String(x.detalle||"").toUpperCase().indexOf("FORMAL")===0;
   const dictadas=caps.filter(x=>!esPend(x)), pend=caps.filter(esPend);
-  $("capInfo").innerHTML=`<b>${dictadas.length}</b> capacitaciones dictadas`+(pend.length?` · <span class="chip warn">${pend.length} pendientes</span>`:"");
-  // ── estadística por gestor ──
+  // LA CAPACITACIÓN ES UN EVENTO: fecha+estación(+gestor); los temas van adentro
+  const evMap={};
+  const estBaseCap=x=>String(x||"").toUpperCase().split("-")[0].replace(/\s+/g," ").trim();
+  dictadas.forEach(x=>{
+    const k=fechaISO(x.fecha)+"|"+estBaseCap(x.estacion);
+    const e=evMap[k]=evMap[k]||{fecha:x.fecha,est:x.estacion,gestor:(norm(x.gestor)||"S/D").split(" ").pop(),temas:[],formal:false,asist:0,dets:[]};
+    if(x.tema)String(x.tema).split(";").forEach(t=>{t=t.trim();if(t&&e.temas.indexOf(t)===-1)e.temas.push(t);});
+    if(esFormal(x))e.formal=true;
+    if(x.detalle&&e.dets.indexOf(x.detalle)===-1)e.dets.push(x.detalle);
+    const n=parseInt(String(x.asistentes||"").match(/\d+/)||"");
+    if(!isNaN(n)&&n>e.asist)e.asist=n;
+  });
+  const eventos=Object.values(evMap);
+  $("capInfo").innerHTML=`<b>${eventos.length}</b> capacitaciones dictadas`;
+  // ── estadística por gestor (en eventos) ──
   const stats={};
   const st=g=>stats[g]=stats[g]||{d:0,f:0,r:0,p:0,pers:0};
-  caps.forEach(x=>{
-    const g=norm(x.gestor)||"S/D", e=st(g);
-    if(esPend(x)){e.p++;return;}
-    e.d++;
-    if(esFormal(x))e.f++;else e.r++;
-    const n=parseInt(String(x.asistentes||"").match(/\d+/)||"");
-    if(!isNaN(n))e.pers+=n;
+  eventos.forEach(e=>{
+    const g=st(e.gestor);
+    g.d++;
+    if(e.formal)g.f++;else g.r++;
+    g.pers+=e.asist||0;
   });
+  const respDe=x=>{const m=String(x.detalle||"").match(/^PENDIENTE\s*\(resp:?\s*([^)]+)\)/i);return m?m[1].trim().toUpperCase():"GESTOR";};
+  const pendGestor=pend.filter(x=>respDe(x)==="GESTOR"), pendTerceros=pend.filter(x=>respDe(x)!=="GESTOR");
+  pendGestor.forEach(x=>{st(norm(x.gestor)||"S/D").p++;});
+  $("capInfo").innerHTML=`<b>${eventos.length}</b> capacitaciones dictadas`+
+    (pendGestor.length?` · <span class="chip warn">${pendGestor.length} futuras del gestor</span>`:"")+
+    (pendTerceros.length?` · <span class="chip" style="background:var(--lighter)">${pendTerceros.length} de otros responsables</span>`:"");
   const tbR=$("tCapResumen").querySelector("tbody");
   tbR.innerHTML="";
   Object.entries(stats).sort((a,b)=>b[1].d-a[1].d||b[1].pers-a[1].pers).forEach(([g,e])=>{
@@ -781,15 +806,45 @@ function renderCapacitaciones(){
   });
   const T=Object.values(stats).reduce((a,e)=>({d:a.d+e.d,f:a.f+e.f,r:a.r+e.r,p:a.p+e.p,pers:a.pers+e.pers}),{d:0,f:0,r:0,p:0,pers:0});
   tbR.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.d}</td><td>${T.f}</td><td>${T.r}</td><td>${T.pers||"—"}</td><td>${T.p}</td></tr>`);
+  // ── por estación: mapear cada evento a su estación asignada ──
+  const ests=listaEstaciones();
+  const vecesEst={}, ultimaEst={};
+  eventos.forEach(e=>{
+    const vn=normEst(e.est);
+    let mejor=null,mp=-1e9;
+    ests.forEach(x=>{ if(coincideEst(vn,x.k)){const p=puntajeMatch(vn,x.k); if(p>mp){mejor=x.k;mp=p;}} });
+    const k=mejor||vn;
+    vecesEst[k]=(vecesEst[k]||0)+1;
+    const fi=fechaISO(e.fecha);
+    if(!ultimaEst[k]||fi>ultimaEst[k])ultimaEst[k]=fi;
+  });
+  const tbE=$("tCapEst").querySelector("tbody");
+  tbE.innerHTML="";
+  const soloCap=$("soloCapacitadas").checked;
+  const filasEst=ests.map(x=>({n:x.nombre,div:x.div,g:x.gestores.join(", "),v:vecesEst[x.k]||0,u:ultimaEst[x.k]||""}))
+    .filter(x=>!soloCap||x.v>0)
+    .sort((a,b)=>b.v-a.v||a.n.localeCompare(b.n));
+  const capN=ests.filter(x=>(vecesEst[x.k]||0)>0).length;
+  $("capEstInfo").textContent=`${capN} de ${ests.length} estaciones con capacitación`;
+  filasEst.forEach(x=>{
+    const u=x.u?x.u.split("-").reverse().join("/"):"—";
+    tbE.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(x.n)}</b></td><td>${esc(x.div)}</td><td>${esc(x.g)}</td><td>${x.v?'<span class="chip ok">Sí</span>':'<span class="chip crit">No</span>'}</td><td>${x.v||0}</td><td>${u}</td></tr>`);
+  });
+
   const sel=$("filtroGestorCap");
   const gestoresCap=[...new Set(caps.map(x=>norm(x.gestor)||"S/D"))].sort();
   const elegido=sel.value;
   sel.innerHTML='<option value="">Todos los gestores</option>'+gestoresCap.map(g=>`<option value="${esc(g)}"${g===elegido?" selected":""}>${esc(g)}</option>`).join("");
-  const detalleCaps=[...pend,...dictadas].filter(x=>!sel.value||(norm(x.gestor)||"S/D")===sel.value);
-  detalleCaps.forEach(x=>{
-    const f=d(x.fecha), ftxt=("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();
-    const p=esPend(x);
-    tb.insertAdjacentHTML("beforeend",`<tr${p?' style="background:var(--warn-bg)"':''}><td>${ftxt}</td><td><b>${esc(x.estacion)}</b></td><td>${esc(norm(x.gestor))}</td><td>${p?'<span class="chip warn">PENDIENTE</span> ':''}${esc(x.tema||"—")}</td><td>${esc(x.asistentes||"—")}</td><td style="max-width:340px">${esc(p?String(x.detalle).replace(/^PENDIENTE:\s*/i,""):x.detalle||"")}</td></tr>`);
+  const fx=x=>{const f=d(x);return ("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();};
+  // pendientes primero (individuales: cada deuda a la vista), luego los eventos por fecha desc
+  [...pendGestor,...pendTerceros].filter(x=>!sel.value||(norm(x.gestor)||"S/D")===sel.value).forEach(x=>{
+    const r=respDe(x), propia=r==="GESTOR";
+    const det=String(x.detalle).replace(/^PENDIENTE\s*(\([^)]*\))?:\s*/i,"");
+    tb.insertAdjacentHTML("beforeend",`<tr style="background:${propia?"var(--warn-bg)":"var(--lighter)"}"><td>${fx(x.fecha)}</td><td><b>${esc(x.estacion)}</b></td><td>${esc(norm(x.gestor))}</td><td><span class="chip ${propia?"warn":""}">FUTURA${propia?" · a realizar por el gestor":" · debe "+esc(r)}</span> ${esc(x.tema||"—")}</td><td>—</td><td style="max-width:340px">${esc(det)}${propia?"":" <i style='color:var(--muted)'>(detección del gestor)</i>"}</td></tr>`);
+  });
+  eventos.filter(e=>!sel.value||e.gestor===sel.value).sort((a,b)=>d(b.fecha)-d(a.fecha)).forEach(e=>{
+    const temasHtml=e.temas.length>1?"<ul style='margin:2px 0 0;padding-left:16px'>"+e.temas.map(t=>`<li>${esc(t)}</li>`).join("")+"</ul>":esc(e.temas[0]||"—");
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${fx(e.fecha)}</b></td><td><b>${esc(e.est)}</b></td><td>${esc(e.gestor)}</td><td style="max-width:300px">${temasHtml}</td><td>${e.asist||"—"}</td><td style="max-width:280px"><span class="chip ${e.formal?"ok":""}">${e.formal?"Planilla firmada":"Refuerzo en visita"}</span></td></tr>`);
   });
 }
 
@@ -1159,6 +1214,7 @@ setVista((function(){try{return LS.g("gcVista")||"cardGestores";}catch(e){return
 
 $("selGestorRes").addEventListener("change",renderResultadosGestor);
 $("filtroGestorCap").addEventListener("change",renderCapacitaciones);
+$("soloCapacitadas").addEventListener("change",renderCapacitaciones);
 ["input","change"].forEach(ev=>{
   $("buscaEst").addEventListener(ev,renderEstaciones);
   $("filtroGestorEst").addEventListener(ev,renderEstaciones);
