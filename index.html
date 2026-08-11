@@ -227,7 +227,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Temas vistos</th><th>Asistentes</th><th>Modalidad</th></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Se registran desde los emails: dictadas (con planilla o descritas en el cuerpo) y PENDIENTES (formación señalada como faltante — deuda del gestor, resaltada en ámbar arriba). Sin corte de fecha. No cuentan como visita con check.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Se registran desde los emails: dictadas (con planilla o descritas en el cuerpo) y PENDIENTES (formación señalada como faltante — deuda del gestor, resaltada en ámbar arriba). Desde el 01/07/2026, mismo corte que los checks. No cuentan como visita con check.</p>
   </div>
 
   <div class="card vista" id="cardEstaciones">
@@ -760,7 +760,7 @@ function renderResultadosGestor(){
 function renderCapacitaciones(){
   const tb=$("tCapacitaciones")&&$("tCapacitaciones").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
-  const caps=(DATA.capacitaciones||[]).filter(x=>d(x.fecha))
+  const caps=(DATA.capacitaciones||[]).filter(x=>{const f=d(x.fecha);return f&&f>=FECHA_CORTE;})
     .sort((a,b)=>d(b.fecha)-d(a.fecha));
   if(!caps.length){
     $("capInfo").textContent="";
