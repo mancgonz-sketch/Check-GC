@@ -195,7 +195,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026: toda visita anterior queda fuera de todas las estadísticas. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La columna "Trimestre completo" responde si el gestor pasó por TODAS sus estaciones en el trimestre calendario en curso (el detalle de cuáles faltan aparece al posar el mouse en el chip). La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026: toda visita anterior queda fuera de todas las estadísticas. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
 
   </div>
 
@@ -684,16 +684,21 @@ function renderTrimestres(){
   const tris=trimestresDesdeCorte();
   th.innerHTML="<tr><th>Gestor</th>"+tris.map(t=>`<th>T${t.q+1} ${t.a}<br><span style="font-weight:400;font-size:10px">${MESES[t.q]}</span></th>`).join("")+"</tr>";
   tb.innerHTML="";
-  const gestores=Object.keys(ASIGNACIONES).sort();
-  gestores.forEach(g=>{
-    const celdas=tris.map(t=>{
+  const filasT=Object.keys(ASIGNACIONES).map(g=>{
+    const cobs=tris.map(t=>{
       const visQ=DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f>=t.ini&&f<t.fin&&tieneCheck(v);});
-      const cob=coberturaDe(g,visQ);
+      return coberturaDe(g,visQ);
+    });
+    const ultimo=cobs[cobs.length-1];
+    return {g,cobs,ord:ultimo?ultimo.pct:-1};
+  }).sort((x,y)=>y.ord-x.ord||(x.g<y.g?-1:1));
+  filasT.forEach(f=>{
+    const celdas=f.cobs.map(cob=>{
       if(!cob)return "<td>—</td>";
       const cls=cob.pct===100?"ok":cob.pct>=60?"warn":"crit";
-      return `<td><span class="chip ${cls}">${cob.pct===100?"✔ ":""}${cob.cubiertas}/${cob.total}</span></td>`;
+      return `<td><span class="chip ${cls}">${cob.pct===100?"✔ ":""}${cob.cubiertas}/${cob.total} · ${cob.pct}%</span></td>`;
     }).join("");
-    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td>${celdas}</tr>`);
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(f.g)}</b></td>${celdas}</tr>`);
   });
 }
 function renderAsignadas(){
@@ -724,7 +729,7 @@ function renderGestores(){
   const anios=aniosConVisitas();
   $("gestHead").innerHTML="<th>Gestor</th><th>Último mes</th><th>Último trimestre</th><th>Último semestre</th>"+
     anios.map(a=>`<th>Año ${a}</th>`).join("")+
-    "<th>Estaciones distintas (${y})</th><th>Emails sin check</th><th>Cobertura de asignadas</th><th>Trimestre completo</th>".replace("${y}",y);
+    "<th>Estaciones distintas (${y})</th><th>Emails sin check</th><th>Cobertura de asignadas</th>".replace("${y}",y);
   const hace=n=>{const f=new Date(h);f.setDate(f.getDate()-n);return f;};
   const d30=hace(30), d90=hace(90), d180=hace(180);
   const nombres=DATA.gestores?DATA.gestores.map(g=>({n:norm(g.nombre),mat:g.mat})):
@@ -744,10 +749,6 @@ function renderGestores(){
     const brom=anio.filter(esBrom).length;
     const sinCk=visTodas.filter(v=>!tieneCheck(v)&&d(v.fecha).getFullYear()===y).length;
     const cob=coberturaDe(g.n,anio);
-    const T3=trimestreActual();
-    const visT=vis.filter(v=>d(v.fecha)>=T3.ini);
-    const cobT=coberturaDe(g.n,visT);
-    const faltT=faltantesDe(g.n,visT);
     let cobCell="—";
     if(cob){
       const cls=cob.pct>=70?"ok":cob.pct>=35?"warn":"crit";
@@ -757,10 +758,10 @@ function renderGestores(){
     T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;T.sc+=sinCk;T.br+=brom;
     porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
     filas.push({ord:(cob?cob.pct:-1)*10000+ca,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
-      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map((n,i)=>`<td>${n}${anios[i]===y&&brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td>`).join("")}<td>${distintas}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td><td>${cobT?`<span class="chip ${cobT.pct===100?"ok":cobT.pct>=60?"warn":"crit"}" title="Faltan: ${esc(faltT.join(", ")||"ninguna")}">${cobT.pct===100?"✔ ":""}${cobT.cubiertas}/${cobT.total}</span>`:"—"}</td></tr>`});
+      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map((n,i)=>`<td>${n}${anios[i]===y&&brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td>`).join("")}<td>${distintas}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td><td>—</td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td></tr>`);
   const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y&&tieneCheck(v);}).map(v=>normEst(v.estacion))).size;
   const TRI=(function(){const h=new Date(),q=Math.floor(h.getMonth()/3);const M=["ene-mar","abr-jun","jul-sep","oct-dic"];return {ini:new Date(h.getFullYear(),q*3,1),nombre:"T"+(q+1),meses:M[q]};})();
   const estVisitT=new Set(DATA.visitas.filter(v=>tieneCheck(v)&&d(v.fecha)&&d(v.fecha)>=TRI.ini).map(v=>normEst(v.estacion))).size;
