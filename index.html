@@ -505,7 +505,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres();
+  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres(); renderIA();
 }
 
 function aniosConChecks(){
@@ -1276,7 +1276,9 @@ function renderIA(){
   $("iaGestores").innerHTML=(a.gestores||[]).map(g=>`
     <div style="border:1px solid #E4EAF3;border-radius:8px;padding:12px">
       <div style="font-weight:700;color:var(--navy);margin-bottom:6px">${esc(g.nombre)}</div>
-      <div style="font-size:12.5px;line-height:1.45;margin-bottom:6px">${esc(g.perfil)}</div>
+      ${g.nota!=null?`<div style="margin-bottom:6px"><span class="chip ${Number(g.nota)>=8?"ok":Number(g.nota)>=6?"warn":"crit"}" style="font-size:14px;font-weight:700">Nota: ${g.nota}</span></div>`:""}
+      <div style="font-size:12.5px;line-height:1.45;margin-bottom:6px">${esc(g.fortaleza||g.perfil||"")}</div>
+      ${g.sugerencia?`<div style="font-size:12px;background:var(--lighter);border-left:3px solid var(--gold);padding:6px 10px;border-radius:6px;margin-bottom:6px"><b>Sugerencia:</b> ${esc(g.sugerencia)}</div>`:""}
       ${g.alerta?`<div style="font-size:12px;line-height:1.4;color:var(--crit)"><b>Alerta:</b> ${esc(g.alerta)}</div>`:""}
     </div>`).join("");
   $("iaDeps").innerHTML=`<table><thead><tr><th>Dependencia</th><th>Riesgo</th><th>Diagnóstico</th><th>Recomendación</th></tr></thead><tbody>`+
