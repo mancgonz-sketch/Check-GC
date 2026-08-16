@@ -134,6 +134,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
   <div id="statGlobal"></div>
   <nav id="vistaNav" aria-label="Consultas">
     <button data-vista="cardGestores" class="vbtn active">👥 Gestores</button>
+    <button data-vista="cardAsignaciones" class="vbtn">🗂️ Asignaciones</button>
     <button data-vista="cardDiv" class="vbtn">🗺️ Divisionales</button>
     <button data-vista="cardCorte" class="vbtn">📅 Desde el 1/7</button>
     <button data-vista="cardResultados" class="vbtn">📈 Resultados</button>
@@ -168,12 +169,16 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     </table></div>
   </div>
 
-  <div class="card vista" id="cardGestores">
+  <div class="card vista" id="cardAsignaciones" style="display:none">
     <h2>Asignaciones por gestor</h2>
-    <div class="tablewrap" style="max-height:320px;margin-bottom:14px"><table id="tAsignadas">
+    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Clic en un gestor para ver sus estaciones y alojamientos. Fuente: hoja Asignaciones (Concesionarios Vigentes).</p>
+    <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tAsignadas">
       <thead><tr><th>Gestor</th><th>Estaciones</th><th>Alojamientos</th><th>Total a cargo</th></tr></thead>
       <tbody></tbody>
     </table></div>
+  </div>
+
+  <div class="card vista" id="cardGestores">
     <h2>Panel de Gestores — frecuencia de visitas</h2>
 
     <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tGestores">
@@ -490,7 +495,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones();
+  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas();
 }
 
 function aniosConChecks(){
@@ -651,26 +656,32 @@ function aniosConVisitas(){
 function renderAsignadas(){
   const tb=$("tAsignadas")&&$("tAsignadas").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
-  const gestores=Object.keys(ASIGNACIONES).sort();
+  const det=DATA.carteraDetalle||{};
+  const gestores=[...new Set([...Object.keys(ASIGNACIONES),...Object.keys(det)])].sort();
   let TE=0,TA=0;
-  gestores.forEach(g=>{
-    const ests=ASIGNACIONES[g]||[];
-    const cart=(DATA.cartera&&DATA.cartera[g])||{};
-    const aloj=Object.entries(cart).filter(([t])=>!/ESTAC/.test(t)).reduce((s,[,n])=>s+n,0);
-    TE+=ests.length; TA+=aloj;
-    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td><td title="${esc(ests.join(", "))}">${ests.length}</td><td>${aloj||"—"}</td><td><b>${ests.length+aloj}</b></td></tr>`);
+  gestores.forEach((g,i)=>{
+    const d0=det[g]||{};
+    const ests=d0.est||ASIGNACIONES[g]||[];
+    const alojs=d0.aloj||[];
+    TE+=ests.length; TA+=alojs.length;
+    tb.insertAdjacentHTML("beforeend",
+      `<tr style="cursor:pointer" onclick="const f=document.getElementById('asigDet${i}');f.style.display=f.style.display==='none'?'':'none'">`+
+      `<td><b>${esc(g)}</b> <span style="color:var(--muted);font-size:11px">▾</span></td><td>${ests.length}</td><td>${alojs.length||"—"}</td><td><b>${ests.length+alojs.length}</b></td></tr>`+
+      `<tr id="asigDet${i}" style="display:none;background:var(--lighter)"><td colspan="4" style="font-size:12px;padding:10px 16px">`+
+      `<b>⛽ Estaciones (${ests.length}):</b> ${esc(ests.join(" · "))||"—"}`+
+      (alojs.length?`<br><b>🏨 Alojamientos (${alojs.length}):</b> ${esc(alojs.join(" · "))}`:"")+
+      `</td></tr>`);
   });
   tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total red</td><td>${TE}</td><td>${TA}</td><td><b>${TE+TA}</b></td></tr>`);
 }
 function renderGestores(){
-  renderAsignadas();
   const tb=$("tGestores").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
   const h=hoy(), y=h.getFullYear();
   const anios=aniosConVisitas();
   $("gestHead").innerHTML="<th>Gestor</th><th>Último mes</th><th>Último trimestre</th><th>Último semestre</th>"+
     anios.map(a=>`<th>Año ${a}</th>`).join("")+
-    "<th>Estaciones distintas (${y})</th><th>Emails sin check</th><th>Cobertura de asignadas</th><th>Trimestre completo</th><th>Cartera</th>".replace("${y}",y);
+    "<th>Estaciones distintas (${y})</th><th>Emails sin check</th><th>Cobertura de asignadas</th><th>Trimestre completo</th>".replace("${y}",y);
   const hace=n=>{const f=new Date(h);f.setDate(f.getDate()-n);return f;};
   const d30=hace(30), d90=hace(90), d180=hace(180);
   const nombres=DATA.gestores?DATA.gestores.map(g=>({n:norm(g.nombre),mat:g.mat})):
@@ -703,14 +714,17 @@ function renderGestores(){
     T.cm+=cm;T.ct+=ct;T.cs+=cs;T.ca+=ca;T.sc+=sinCk;T.br+=brom;
     porAnio.forEach((n,i)=>T.anios[i]=(T.anios[i]||0)+n);
     filas.push({ord:(cob?cob.pct:-1)*10000+ca,html:`<tr><td><b>${esc(nom)}</b>${g.mat?` <span style="color:var(--muted);font-size:11px">(${g.mat})</span>`:""}</td>
-      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map((n,i)=>`<td>${n}${anios[i]===y&&brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td>`).join("")}<td>${distintas}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td><td>${cobT?`<span class="chip ${cobT.pct===100?"ok":cobT.pct>=60?"warn":"crit"}" title="Faltan: ${esc(faltT.join(", ")||"ninguna")}">${cobT.pct===100?"✔ ":""}${cobT.cubiertas}/${cobT.total}</span>`:"—"}</td><td style="font-size:11px;white-space:nowrap">${DATA.cartera&&DATA.cartera[g.n]?esc(Object.entries(DATA.cartera[g.n]).map(p=>p[1]+" "+p[0].toLowerCase()).join(" · ")):"—"}</td></tr>`});
+      <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map((n,i)=>`<td>${n}${anios[i]===y&&brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td>`).join("")}<td>${distintas}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td><td>${cobT?`<span class="chip ${cobT.pct===100?"ok":cobT.pct>=60?"warn":"crit"}" title="Faltan: ${esc(faltT.join(", ")||"ninguna")}">${cobT.pct===100?"✔ ":""}${cobT.cubiertas}/${cobT.total}</span>`:"—"}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td><td>\u2014</td><td>—</td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td><td>\u2014</td></tr>`);
   const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y&&tieneCheck(v);}).map(v=>normEst(v.estacion))).size;
+  const TRI=(function(){const h=new Date(),q=Math.floor(h.getMonth()/3);const M=["ene-mar","abr-jun","jul-sep","oct-dic"];return {ini:new Date(h.getFullYear(),q*3,1),nombre:"T"+(q+1),meses:M[q]};})();
+  const estVisitT=new Set(DATA.visitas.filter(v=>tieneCheck(v)&&d(v.fecha)&&d(v.fecha)>=TRI.ini).map(v=>normEst(v.estacion))).size;
   $("statGlobal").innerHTML=
     `<div class="statchip gold"><b>${T.ca}</b><span>Visitas ${y}</span></div>`+
-    `<div class="statchip"><b>${estVisit}<span style="font-size:13px;color:var(--muted)">/143</span></b><span>Estaciones visitadas</span></div>`+
+    `<div class="statchip"><b>${estVisit}<span style="font-size:13px;color:var(--muted)">/143</span></b><span>Visitadas en el año ${y}</span></div>`+
+    `<div class="statchip"><b>${estVisitT}<span style="font-size:13px;color:var(--muted)">/143</span></b><span>Visitadas en el ${TRI.nombre} (${TRI.meses})</span></div>`+
     `<div class="statchip"><b>${Math.round(estVisit/143*100)}%</b><span>Cobertura red</span></div>`+
     (T.sc?`<div class="statchip warnc"><b>${T.sc}</b><span>Emails sin check</span></div>`:"")+
     `<div class="statchip"><b style="font-size:13px;font-weight:600;color:var(--muted);margin-top:4px">01/07/${String(y).slice(2)}</b><span>Inicio medición</span></div>`;
