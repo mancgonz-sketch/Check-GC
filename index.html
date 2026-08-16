@@ -107,6 +107,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 #tCapResumen td:not(:first-child),#tCapResumen th:not(:first-child){text-align:center}
 #tCapEst td:nth-child(n+4),#tCapEst th:nth-child(n+4){text-align:center}
 #tAsignadas td:nth-child(n+2),#tAsignadas th:nth-child(n+2){text-align:center}
+#tTrimestres td:nth-child(n+2),#tTrimestres th:nth-child(n+2){text-align:center}
 </style>
 </head>
 <body>
@@ -133,8 +134,9 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 <main>
   <div id="statGlobal"></div>
   <nav id="vistaNav" aria-label="Consultas">
-    <button data-vista="cardGestores" class="vbtn active">👥 Gestores</button>
-    <button data-vista="cardAsignaciones" class="vbtn">🗂️ Asignaciones</button>
+    <button data-vista="cardAsignaciones" class="vbtn active">🗂️ Asignaciones</button>
+    <button data-vista="cardTrimestres" class="vbtn">📆 Trimestres</button>
+    <button data-vista="cardGestores" class="vbtn">👥 Gestores</button>
     <button data-vista="cardDiv" class="vbtn">🗺️ Divisionales</button>
     <button data-vista="cardCorte" class="vbtn">📅 Desde el 1/7</button>
     <button data-vista="cardResultados" class="vbtn">📈 Resultados</button>
@@ -169,7 +171,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     </table></div>
   </div>
 
-  <div class="card vista" id="cardAsignaciones" style="display:none">
+  <div class="card vista" id="cardAsignaciones">
     <h2>Asignaciones por gestor</h2>
     <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Clic en un gestor para ver sus estaciones y alojamientos. Fuente: hoja Asignaciones (Concesionarios Vigentes).</p>
     <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tAsignadas">
@@ -178,14 +180,22 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     </table></div>
   </div>
 
-  <div class="card vista" id="cardGestores">
+  <div class="card vista" id="cardTrimestres" style="display:none">
+    <h2>Cobertura por trimestre — ¿cada gestor visitó todas sus estaciones?</h2>
+    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Cada celda: estaciones cubiertas con check / asignadas en ese trimestre calendario. ✔ = trimestre completo. Los trimestres se van sumando a medida que avanza el calendario (medición desde el 1/7/2026).</p>
+    <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tTrimestres">
+      <thead></thead><tbody></tbody>
+    </table></div>
+  </div>
+
+  <div class="card vista" id="cardGestores" style="display:none">
     <h2>Panel de Gestores — frecuencia de visitas</h2>
 
     <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tGestores">
       <thead><tr id="gestHead"></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026: toda visita anterior queda fuera de todas las estadísticas. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La columna "Trimestre completo" responde si el gestor pas\u00f3 por TODAS sus estaciones en el trimestre calendario en curso (el detalle de cu\u00e1les faltan aparece al posar el mouse en el chip). La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Medición iniciada el 01/07/2026: toda visita anterior queda fuera de todas las estadísticas. Últimos mes/trimestre/semestre = ventanas móviles de 30/90/180 días hacia atrás desde hoy. La columna "Trimestre completo" responde si el gestor pasó por TODAS sus estaciones en el trimestre calendario en curso (el detalle de cuáles faltan aparece al posar el mouse en el chip). La frecuencia computa SOLO visitas con check adjunto y puntaje (los específicos, como Bromatología, cuentan y se discriminan entre paréntesis). "Emails sin check" = avisos de visita sin el check: se muestran como dato de calidad de reporte pero NO suman a la frecuencia ni a la cobertura. Las columnas de Año son calendario: se conserva una por cada año con visitas (el historial nunca se pierde). Cobertura = de sus estaciones asignadas, cuántas visitó en el año. ACA CENTRAL cuenta para Iglesias y Bosch.</p>
 
   </div>
 
@@ -249,7 +259,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <label style="font-size:12.5px;color:var(--muted)"><input type="checkbox" id="soloSinVisita"> Solo sin visita este año</label>
     </div>
     <div class="tablewrap" style="max-height:420px"><table id="tEstaciones">
-      <thead><tr><th>Estación</th><th>Divisional</th><th>Gestor asignado</th><th>Visitas año</th><th>Visitas histórico</th><th>Última visita</th><th>Días sin visita</th></tr></thead>
+      <thead id="estHead"></thead>
       <tbody></tbody>
     </table></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Solo cuentan visitas con check. Verde: visitada hace menos de 45 días · Amarillo: 45–90 · Rojo: más de 90 días o nunca visitada. Ordenadas por días sin visita, de mayor a menor.</p>
@@ -495,7 +505,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas();
+  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres();
 }
 
 function aniosConChecks(){
@@ -590,13 +600,17 @@ function renderEstaciones(){
   const soloSin=$("soloSinVisita").checked;
   const h=hoy(), y=h.getFullYear();
   tb.innerHTML="";
+  const tris=trimestresDesdeCorte();
+  $("estHead").innerHTML="<tr><th>Estación</th><th>Divisional</th><th>Gestor asignado</th><th>Visitas año</th><th>Visitas histórico</th><th>Última visita</th><th>Días sin visita</th>"+
+    tris.map(t=>`<th>Visita T${t.q+1} ${t.a}</th>`).join("")+"</tr>";
   const mapaV=mapaVisitasPorEstacion(true);
   const filas=listaEstaciones().map(e=>{
     const vis=mapaV[e.k]||[];
     const anio=vis.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y;});
     const ult=vis.map(v=>d(v.fecha)).filter(f=>f&&!isNaN(f.getTime())&&f.getFullYear()>2000).sort((a,b)=>b-a)[0];
     const dias=ult?Math.round((h-ult)/86400000):null;
-    return {...e,anio:anio.length,tot:vis.length,ult,dias};
+    const porTri=tris.map(t=>vis.some(v=>{const f=d(v.fecha);return f&&f>=t.ini&&f<t.fin;}));
+    return {...e,anio:anio.length,tot:vis.length,ult,dias,porTri};
   }).filter(e=>{
     if(q&&e.k.indexOf(q)<0)return false;
     if(fg&&e.gestores.indexOf(fg)<0)return false;
@@ -607,9 +621,9 @@ function renderEstaciones(){
     const cls=e.dias===null||e.dias>90?"crit":e.dias>45?"warn":"ok";
     const txt=e.dias===null?"NUNCA":e.dias+" días";
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(e.nombre)}</b></td><td>${esc(e.div)}</td><td>${e.gestores.join(" / ")}</td>
-      <td>${e.anio}</td><td>${e.tot}</td><td>${e.ult?("0"+e.ult.getDate()).slice(-2)+"/"+("0"+(e.ult.getMonth()+1)).slice(-2)+"/"+e.ult.getFullYear():"—"}</td><td><span class="chip ${cls}">${txt}</span></td></tr>`);
+      <td>${e.anio}</td><td>${e.tot}</td><td>${e.ult?("0"+e.ult.getDate()).slice(-2)+"/"+("0"+(e.ult.getMonth()+1)).slice(-2)+"/"+e.ult.getFullYear():"—"}</td><td><span class="chip ${cls}">${txt}</span></td>${e.porTri.map(si=>`<td><span class="chip ${si?"ok":"crit"}">${si?"SÍ":"NO"}</span></td>`).join("")}</tr>`);
   });
-  if(!filas.length)tb.innerHTML='<tr><td colspan="7" style="color:var(--muted)">Sin resultados para ese filtro.</td></tr>';
+  if(!filas.length)tb.innerHTML='<tr><td colspan="'+(7+tris.length)+'" style="color:var(--muted)">Sin resultados para ese filtro.</td></tr>';
   // poblar el filtro de gestor una sola vez
   if($("filtroGestorEst").options.length===1)
     Object.keys(ASIGNACIONES).sort().forEach(g=>$("filtroGestorEst").insertAdjacentHTML("beforeend",`<option>${g}</option>`));
@@ -653,6 +667,35 @@ function aniosConVisitas(){
   return ys.length?ys:[hoy().getFullYear()];
 }
 
+function trimestresDesdeCorte(){
+  const hoy0=hoy(); const tris=[];
+  let a=FECHA_CORTE.getFullYear(), q=Math.floor(FECHA_CORTE.getMonth()/3);
+  while(a<hoy0.getFullYear() || (a===hoy0.getFullYear() && q<=Math.floor(hoy0.getMonth()/3))){
+    tris.push({a,q,ini:new Date(a,q*3,1),fin:new Date(a,q*3+3,1)});
+    q++; if(q>3){q=0;a++;}
+  }
+  return tris;
+}
+function renderTrimestres(){
+  const tabla=$("tTrimestres"); if(!tabla)return;
+  const th=tabla.querySelector("thead"), tb=tabla.querySelector("tbody");
+  const MESES=["ene-mar","abr-jun","jul-sep","oct-dic"];
+  // trimestres desde el inicio de la medición hasta hoy
+  const tris=trimestresDesdeCorte();
+  th.innerHTML="<tr><th>Gestor</th>"+tris.map(t=>`<th>T${t.q+1} ${t.a}<br><span style="font-weight:400;font-size:10px">${MESES[t.q]}</span></th>`).join("")+"</tr>";
+  tb.innerHTML="";
+  const gestores=Object.keys(ASIGNACIONES).sort();
+  gestores.forEach(g=>{
+    const celdas=tris.map(t=>{
+      const visQ=DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f>=t.ini&&f<t.fin&&tieneCheck(v);});
+      const cob=coberturaDe(g,visQ);
+      if(!cob)return "<td>—</td>";
+      const cls=cob.pct===100?"ok":cob.pct>=60?"warn":"crit";
+      return `<td><span class="chip ${cls}">${cob.pct===100?"✔ ":""}${cob.cubiertas}/${cob.total}</span></td>`;
+    }).join("");
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td>${celdas}</tr>`);
+  });
+}
 function renderAsignadas(){
   const tb=$("tAsignadas")&&$("tAsignadas").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
@@ -717,12 +760,12 @@ function renderGestores(){
       <td>${cm}</td><td>${ct}</td><td>${cs}</td>${porAnio.map((n,i)=>`<td>${n}${anios[i]===y&&brom?` <span style="font-size:10.5px;color:var(--navy2)">(${brom} Brom.)</span>`:""}</td>`).join("")}<td>${distintas}</td><td>${sinCk?`<span class="chip warn">${sinCk}</span>`:0}</td><td>${cobCell}</td><td>${cobT?`<span class="chip ${cobT.pct===100?"ok":cobT.pct>=60?"warn":"crit"}" title="Faltan: ${esc(faltT.join(", ")||"ninguna")}">${cobT.pct===100?"✔ ":""}${cobT.cubiertas}/${cobT.total}</span>`:"—"}</td></tr>`});
   });
   filas.sort((a,b)=>b.ord-a.ord).forEach(f=>tb.insertAdjacentHTML("beforeend",f.html));
-  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td><td>\u2014</td></tr>`);
+  tb.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.cm}</td><td>${T.ct}</td><td>${T.cs}</td>${anios.map((a,i)=>`<td>${T.anios[i]||0}${a===y&&T.br?` <span style="font-size:10.5px">(${T.br} Brom.)</span>`:""}</td>`).join("")}<td>—</td><td>${T.sc}</td><td>—</td><td>—</td></tr>`);
   const estVisit=new Set(DATA.visitas.filter(v=>{const f=d(v.fecha);return f&&f.getFullYear()===y&&tieneCheck(v);}).map(v=>normEst(v.estacion))).size;
   const TRI=(function(){const h=new Date(),q=Math.floor(h.getMonth()/3);const M=["ene-mar","abr-jun","jul-sep","oct-dic"];return {ini:new Date(h.getFullYear(),q*3,1),nombre:"T"+(q+1),meses:M[q]};})();
   const estVisitT=new Set(DATA.visitas.filter(v=>tieneCheck(v)&&d(v.fecha)&&d(v.fecha)>=TRI.ini).map(v=>normEst(v.estacion))).size;
   $("statGlobal").innerHTML=
-    `<div class="statchip gold"><b>${T.ca}</b><span>Visitas ${y}</span></div>`+
+    `<div class="statchip gold"><b>${T.ca}</b><span>Checks realizados ${y}</span></div>`+
     `<div class="statchip"><b>${estVisit}<span style="font-size:13px;color:var(--muted)">/143</span></b><span>Visitadas en el año ${y}</span></div>`+
     `<div class="statchip"><b>${estVisitT}<span style="font-size:13px;color:var(--muted)">/143</span></b><span>Visitadas en el ${TRI.nombre} (${TRI.meses})</span></div>`+
     `<div class="statchip"><b>${Math.round(estVisit/143*100)}%</b><span>Cobertura red</span></div>`+
@@ -1266,7 +1309,7 @@ function setVista(v){
   document.querySelectorAll(".vbtn").forEach(b=>b.classList.toggle("active",b.dataset.vista===v));
 }
 document.querySelectorAll(".vbtn").forEach(b=>b.addEventListener("click",()=>setVista(b.dataset.vista)));
-setVista((function(){try{return LS.g("gcVista")||"cardGestores";}catch(e){return "cardGestores";}})());
+setVista((function(){try{return LS.g("gcVista")||"cardAsignaciones";}catch(e){return "cardAsignaciones";}})());
 
 $("selGestorRes").addEventListener("change",renderResultadosGestor);
 $("filtroGestorCap").addEventListener("change",renderCapacitaciones);
