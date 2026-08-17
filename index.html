@@ -299,6 +299,14 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <div id="iaFecha" style="font-size:11.5px;color:var(--muted);margin-bottom:8px"></div>
     <p id="iaResumen" style="margin-bottom:12px;line-height:1.5"></p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px" id="iaGestores"></div>
+    <div style="margin-top:14px;padding:10px 14px;background:var(--lighter);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7">
+      <b style="color:var(--navy)">Cómo se calcula la nota</b> · La IA evalúa la CALIDAD (rigor de detección, seguimiento, honestidad de puntuación) y pone una base 1-10. Los números del sistema ajustan:
+      <b>techos</b> (0 checks → máx 3 · ≤2 checks sin capacitar → máx 5) ·
+      <b>−0.5</b> por visita sin check · <b>−0.5</b> por capacitación propia pendiente · <b>−0.5</b> si no capacitó ·
+      <b>+0.25</b> por capacitación dictada (tope +1) ·
+      <b>ritmo trimestral</b>: cobertura lograda vs días transcurridos (al día <b>+0.5</b> · rezago hasta <b>−1.5</b>).
+      Clic en cada gestor muestra su cuenta exacta. Puntajes bajos bien fundados NO bajan la nota: son honestidad.
+    </div>
 
   </div>
 
@@ -1274,10 +1282,13 @@ function renderIA(){
   if(!a){$("iaFecha").textContent="";$("iaResumen").textContent="Todavía no hay un análisis generado (corre los domingos, o ejecutá analisisIA desde el editor).";$("iaGestores").innerHTML="";return;}
   $("iaFecha").textContent="Generado: "+fmt(a.fecha)+" · Motor: Claude (Apps Script)";
   $("iaResumen").textContent=a.resumen||"";
-  $("iaGestores").innerHTML=(a.gestores||[]).slice().sort((x,y)=>(Number(y.nota)||0)-(Number(x.nota)||0)).map(g=>`
-    <div style="border:1px solid #E4EAF3;border-radius:8px;padding:12px">
-      <div style="font-weight:700;color:var(--navy);margin-bottom:6px">${esc(g.nombre)}</div>
+  $("iaGestores").innerHTML=(a.gestores||[]).slice().sort((x,y)=>(Number(y.nota)||0)-(Number(x.nota)||0)).map((g,i)=>`
+    <div style="border:1px solid #E4EAF3;border-radius:8px;padding:12px;cursor:pointer" onclick="const d=document.getElementById('iaDet${i}');d.style.display=d.style.display==='none'?'':'none'">
+      <div style="font-weight:700;color:var(--navy);margin-bottom:6px">${esc(g.nombre)} <span style="color:var(--muted);font-size:11px;font-weight:400">▾ clic para ver la cuenta</span></div>
       ${g.nota!=null?`<div style="margin-bottom:6px"><span class="chip ${Number(g.nota)>=8?"ok":Number(g.nota)>=6?"warn":"crit"}" style="font-size:14px;font-weight:700">Nota: ${g.nota}</span></div>`:""}
+      <div id="iaDet${i}" style="display:none;background:var(--lighter);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:11.5px;line-height:1.7">
+        <b>Qué obtuvo y por qué:</b><br>${g.desglose?g.desglose.split(" · ").map(p=>"· "+esc(p)).join("<br>"):"(sin desglose)"}
+      </div>
       <div style="font-size:12.5px;line-height:1.45;margin-bottom:6px">${esc(g.fortaleza||g.perfil||"")}</div>
       ${g.sugerencia?`<div style="font-size:12px;background:var(--lighter);border-left:3px solid var(--gold);padding:6px 10px;border-radius:6px;margin-bottom:6px"><b>Sugerencia:</b> ${esc(g.sugerencia)}</div>`:""}
       ${g.alerta?`<div style="font-size:12px;line-height:1.4;color:var(--crit)"><b>Alerta:</b> ${esc(g.alerta)}</div>`:""}
