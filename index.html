@@ -298,7 +298,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <div id="iaFecha" style="font-size:11.5px;color:var(--muted);margin-bottom:8px"></div>
     <p id="iaResumen" style="margin-bottom:12px;line-height:1.5"></p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px" id="iaGestores"></div>
-    <div class="tablewrap" style="margin-top:14px" id="iaDeps"></div>
+
   </div>
 
   <div class="charts" style="display:none">
@@ -1273,7 +1273,7 @@ function renderIA(){
   $("cardIA").style.display="";
   $("iaFecha").textContent="Generado: "+fmt(a.fecha)+" · Motor: Claude (Apps Script)";
   $("iaResumen").textContent=a.resumen||"";
-  $("iaGestores").innerHTML=(a.gestores||[]).map(g=>`
+  $("iaGestores").innerHTML=(a.gestores||[]).slice().sort((x,y)=>(Number(y.nota)||0)-(Number(x.nota)||0)).map(g=>`
     <div style="border:1px solid #E4EAF3;border-radius:8px;padding:12px">
       <div style="font-weight:700;color:var(--navy);margin-bottom:6px">${esc(g.nombre)}</div>
       ${g.nota!=null?`<div style="margin-bottom:6px"><span class="chip ${Number(g.nota)>=8?"ok":Number(g.nota)>=6?"warn":"crit"}" style="font-size:14px;font-weight:700">Nota: ${g.nota}</span></div>`:""}
@@ -1281,10 +1281,6 @@ function renderIA(){
       ${g.sugerencia?`<div style="font-size:12px;background:var(--lighter);border-left:3px solid var(--gold);padding:6px 10px;border-radius:6px;margin-bottom:6px"><b>Sugerencia:</b> ${esc(g.sugerencia)}</div>`:""}
       ${g.alerta?`<div style="font-size:12px;line-height:1.4;color:var(--crit)"><b>Alerta:</b> ${esc(g.alerta)}</div>`:""}
     </div>`).join("");
-  $("iaDeps").innerHTML=`<table><thead><tr><th>Dependencia</th><th>Riesgo</th><th>Diagnóstico</th><th>Recomendación</th></tr></thead><tbody>`+
-    (a.dependencias||[]).map(x=>`<tr><td>${esc(x.d)}</td>
-    <td><span class="sem ${x.riesgo==="Alto"?"crit":x.riesgo==="Medio"?"warn":"ok"}">${esc(x.riesgo)}</span></td>
-    <td style="font-size:12.5px">${esc(x.diagnostico)}</td><td style="font-size:12.5px">${esc(x.recomendacion)}</td></tr>`).join("")+"</tbody></table>";
 }
 
 $("lockBtn").addEventListener("click",async()=>{
