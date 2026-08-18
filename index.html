@@ -504,7 +504,10 @@ function visitasMes(arr){
 }
 
 function render(){
-  if(DATA&&DATA.asignaciones&&Object.keys(DATA.asignaciones).length)ASIGNACIONES=DATA.asignaciones;
+  if(DATA&&DATA.asignaciones&&Object.keys(DATA.asignaciones).length){
+    ASIGNACIONES={};
+    Object.entries(DATA.asignaciones).forEach(([g,ests])=>ASIGNACIONES[g]=[...new Set(ests)]);
+  }
   const vis=filtrar(DATA.visitas), obs=filtrar(DATA.observaciones), rec=filtrar(DATA.reclamos);
   const vm=visitasMes(vis), oa=obs.filter(obsAbierta), ov=obs.filter(o=>obsAbierta(o)&&obsVencida(o)), ra=rec.filter(recAbierto);
   const conSLA=rec.map(recSLA), si=conSLA.filter(x=>x==="Sí").length;
@@ -629,7 +632,7 @@ function renderEstaciones(){
   filas.forEach(e=>{
     const cls=e.dias===null||e.dias>90?"crit":e.dias>45?"warn":"ok";
     const txt=e.dias===null?"NUNCA":e.dias+" días";
-    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(e.nombre)}</b></td><td>${esc(e.div)}</td><td>${e.gestores.join(" / ")}</td>
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(e.nombre)}</b></td><td>${esc(e.div)}</td><td>${[...new Set(e.gestores)].join(" / ")}</td>
       <td>${e.anio}</td><td>${e.tot}</td><td>${e.ult?("0"+e.ult.getDate()).slice(-2)+"/"+("0"+(e.ult.getMonth()+1)).slice(-2)+"/"+e.ult.getFullYear():"—"}</td><td><span class="chip ${cls}">${txt}</span></td>${e.porTri.map(si=>`<td><span class="chip ${si?"ok":"crit"}">${si?"SÍ":"NO"}</span></td>`).join("")}</tr>`);
   });
   if(!filas.length)tb.innerHTML='<tr><td colspan="'+(7+tris.length)+'" style="color:var(--muted)">Sin resultados para ese filtro.</td></tr>';
@@ -718,8 +721,8 @@ function renderAsignadas(){
   let TE=0,TA=0;
   gestores.forEach((g,i)=>{
     const d0=det[g]||{};
-    const ests=d0.est||ASIGNACIONES[g]||[];
-    const alojs=d0.aloj||[];
+    const ests=[...new Set(d0.est||ASIGNACIONES[g]||[])];
+    const alojs=[...new Set(d0.aloj||[])];
     TE+=ests.length; TA+=alojs.length;
     tb.insertAdjacentHTML("beforeend",
       `<tr style="cursor:pointer" onclick="const f=document.getElementById('asigDet${i}');f.style.display=f.style.display==='none'?'':'none'">`+
