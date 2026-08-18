@@ -183,7 +183,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 
   <div class="card vista" id="cardTrimestres" style="display:none">
     <h2>Cobertura por trimestre — ¿cada gestor visitó todas sus estaciones?</h2>
-    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Cada celda: estaciones cubiertas con check / asignadas en ese trimestre calendario. ✔ = trimestre completo. Los trimestres se van sumando a medida que avanza el calendario (medición desde el 1/7/2026).</p>
+    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Ventanas móviles de 3 meses que avanzan mes a mes (JUL-SEP · AGO-OCT · SEP-NOV...). Cada celda: estaciones cubiertas con check / asignadas dentro de esa ventana. ✔ = ventana completa. Cada mes nace una ventana nueva y las cerradas quedan como historial (medición desde el 1/7/2026).</p>
     <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tTrimestres">
       <thead></thead><tbody></tbody>
     </table></div>
@@ -614,7 +614,7 @@ function renderEstaciones(){
   tb.innerHTML="";
   const tris=trimestresDesdeCorte();
   $("estHead").innerHTML="<tr><th>Estación</th><th>Divisional</th><th>Gestor asignado</th><th>Visitas año</th><th>Visitas histórico</th><th>Última visita</th><th>Días sin visita</th>"+
-    tris.map(t=>`<th>Visita T${t.q+1} ${t.a}</th>`).join("")+"</tr>";
+    tris.map(t=>`<th>Visita ${t.label}</th>`).join("")+"</tr>";
   const mapaV=mapaVisitasPorEstacion(true);
   const filas=listaEstaciones().map(e=>{
     const vis=mapaV[e.k]||[];
@@ -680,21 +680,25 @@ function aniosConVisitas(){
 }
 
 function trimestresDesdeCorte(){
-  const hoy0=hoy(); const tris=[];
-  let a=FECHA_CORTE.getFullYear(), q=Math.floor(FECHA_CORTE.getMonth()/3);
-  while(a<hoy0.getFullYear() || (a===hoy0.getFullYear() && q<=Math.floor(hoy0.getMonth()/3))){
-    tris.push({a,q,ini:new Date(a,q*3,1),fin:new Date(a,q*3+3,1)});
-    q++; if(q>3){q=0;a++;}
+  // ventanas móviles de 3 meses, avanzando de a un mes desde el inicio de la medición:
+  // JUL-SEP · AGO-OCT · SEP-NOV · OCT-DIC · ... (cada una aparece cuando arranca su primer mes)
+  const M=["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
+  const hoy0=hoy(); const vents=[];
+  let a=FECHA_CORTE.getFullYear(), m=FECHA_CORTE.getMonth();
+  while(new Date(a,m,1)<=hoy0){
+    const ini=new Date(a,m,1), fin=new Date(a,m+3,1);
+    const finMes=new Date(a,m+2,1);
+    const label=M[ini.getMonth()]+"-"+M[finMes.getMonth()]+" "+String(finMes.getFullYear()).slice(2);
+    vents.push({ini,fin,label,enCurso:fin>hoy0});
+    m++; if(m>11){m=0;a++;}
   }
-  return tris;
+  return vents;
 }
 function renderTrimestres(){
   const tabla=$("tTrimestres"); if(!tabla)return;
   const th=tabla.querySelector("thead"), tb=tabla.querySelector("tbody");
-  const MESES=["ene-mar","abr-jun","jul-sep","oct-dic"];
-  // trimestres desde el inicio de la medición hasta hoy
   const tris=trimestresDesdeCorte();
-  th.innerHTML="<tr><th>Gestor</th>"+tris.map(t=>`<th>T${t.q+1} ${t.a}<br><span style="font-weight:400;font-size:10px">${MESES[t.q]}</span></th>`).join("")+"</tr>";
+  th.innerHTML="<tr><th>Gestor</th>"+tris.map(t=>`<th>${t.label}${t.enCurso?`<br><span style="font-weight:400;font-size:10px">en curso</span>`:""}</th>`).join("")+"</tr>";
   tb.innerHTML="";
   const filasT=Object.keys(ASIGNACIONES).map(g=>{
     const cobs=tris.map(t=>{
