@@ -183,7 +183,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 
   <div class="card vista" id="cardTrimestres" style="display:none">
     <h2>Cobertura por trimestre — ¿cada gestor visitó todas sus estaciones?</h2>
-    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Ventanas móviles de 3 meses que avanzan mes a mes (JUL-SEP · AGO-OCT · SEP-NOV...). Cada celda: estaciones cubiertas con check / asignadas dentro de esa ventana. ✔ = ventana completa. Cada mes nace una ventana nueva y las cerradas quedan como historial (medición desde el 1/7/2026).</p>
+    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Ventanas móviles de 3 meses: al cerrar la ventana en curso, nace la siguiente corrida un mes (JUL-SEP → AGO-OCT → SEP-NOV...). Las cerradas quedan como historial congelado. Cada celda: estaciones cubiertas con check / asignadas dentro de esa ventana. ✔ = ventana completa (medición desde el 1/7/2026).</p>
     <div class="tablewrap" style="max-height:none;overflow:visible"><table id="tTrimestres">
       <thead></thead><tbody></tbody>
     </table></div>
@@ -692,7 +692,10 @@ function trimestresDesdeCorte(){
     vents.push({ini,fin,label,enCurso:fin>hoy0});
     m++; if(m>11){m=0;a++;}
   }
-  return vents;
+  // una sola ventana viva a la vez: las cerradas + SOLO la primera en curso
+  // (la siguiente nace recién cuando la actual cierra)
+  const corte=vents.findIndex(v=>v.enCurso);
+  return corte===-1?vents:vents.slice(0,corte+1);
 }
 function renderTrimestres(){
   const tabla=$("tTrimestres"); if(!tabla)return;
