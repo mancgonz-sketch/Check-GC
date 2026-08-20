@@ -228,12 +228,18 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <tbody></tbody>
     </table></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Resultado del check en cada visita, en orden cronológico. Verde: 95% o más · Amarillo: 90–94,9% · Rojo: menos de 90% · "s/p": visita sin puntaje registrado.</p>
+    <h2 style="margin-top:14px" id="resCapTitulo" hidden>Capacitaciones del gestor</h2>
+    <div class="tablewrap" style="max-height:none;overflow:visible" id="resCapWrap" hidden><table id="tResCaps">
+      <thead><tr><th>Fecha</th><th>Estación</th><th>Temas</th><th>Asistentes</th><th>Modalidad</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
   </div>
 
   <div class="card vista" id="cardCapacitaciones">
     <h2>Capacitaciones dictadas</h2>
     <div id="capInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
-    <div class="tablewrap" style="max-height:300px;margin-bottom:14px"><table id="tCapResumen">
+    <div style="margin-bottom:12px"><b style="font-size:12.5px;margin-right:6px">Ver gestor:</b><select id="filtroGestorCap"><option value="">Todos los gestores</option></select></div>
+    <div class="tablewrap" style="max-height:none;overflow:visible;margin-bottom:14px"><table id="tCapResumen">
       <thead><tr><th>Gestor</th><th>Dictadas</th><th>Formales (planilla)</th><th>Refuerzos en visita</th><th>Personas capacitadas</th><th>Futuras propias</th></tr></thead>
       <tbody></tbody>
     </table></div>
@@ -244,7 +250,6 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <tbody></tbody>
     </table></div>
     <h2 style="margin-top:6px">Detalle</h2>
-    <div style="margin-bottom:10px"><select id="filtroGestorCap"><option value="">Todos los gestores</option></select></div>
     <div class="tablewrap" style="max-height:420px"><table id="tCapacitaciones">
       <thead><tr><th>Fecha</th><th>Estación</th><th>Gestor</th><th>Temas vistos</th><th>Asistentes</th><th>Modalidad</th></tr></thead>
       <tbody></tbody>
@@ -829,13 +834,13 @@ function renderResultadosGestor(){
   const g=sel.value;
   const head=$("resHead"), tb=$("tResGestor").querySelector("tbody");
   head.innerHTML=""; tb.innerHTML="";
-  if(!g){$("resGestorInfo").textContent="";tb.innerHTML='<tr><td style="color:var(--muted)">Seleccioná un gestor para ver la evolución de resultados de sus estaciones.</td></tr>';return;}
+  if(!g){$("resGestorInfo").textContent="";tb.innerHTML='<tr><td style="color:var(--muted)">Seleccioná un gestor para ver la evolución de resultados de sus estaciones.</td></tr>';if($("resCapTitulo")){$("resCapTitulo").hidden=true;$("resCapWrap").hidden=true;}return;}
   // agrupar visitas del gestor por estación, en orden cronológico
   const vis=DATA.visitas.filter(v=>esDelGestor(v,g)&&d(v.fecha)).sort((a,b)=>d(a.fecha)-d(b.fecha));
   const por={};
   vis.forEach(v=>{(por[v.estacion]=por[v.estacion]||[]).push(v);});
   const ests=Object.entries(por).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
-  if(!ests.length){$("resGestorInfo").textContent="Sin visitas cargadas.";tb.innerHTML='<tr><td style="color:var(--muted)">Este gestor todavía no tiene checks en el sistema.</td></tr>';return;}
+  if(!ests.length){$("resGestorInfo").textContent="Sin visitas cargadas.";tb.innerHTML='<tr><td style="color:var(--muted)">Este gestor todavía no tiene checks en el sistema.</td></tr>';}
   const MESES_L=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   const claveMes=v=>{const f=d(v.fecha);return f.getFullYear()*100+f.getMonth();};
   const meses=[...new Set(vis.map(claveMes))].sort((a,b)=>a-b);
@@ -874,8 +879,30 @@ function renderResultadosGestor(){
     };
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(est)}</b></td>`+meses.map(celdaMes).join("")+promCell+"</tr>");
   });
-}
 
+  // ── capacitaciones del gestor, debajo de las visitas ──
+  const capT=$("resCapTitulo"), capW=$("resCapWrap");
+  if(capT&&capW){
+    const sinAcR=x=>String(x||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const capsG=(DATA.capacitaciones||[]).filter(x=>{
+      const f=d(x.fecha); if(!f||f<FECHA_CORTE)return false;
+      const gx=sinAcR(norm(x.gestor)||""); return gx.indexOf(sinAcR(g))!==-1||sinAcR(g).indexOf(gx)!==-1;
+    }).sort((a,b)=>d(b.fecha)-d(a.fecha));
+    const tbc=$("tResCaps").querySelector("tbody"); tbc.innerHTML="";
+    capT.hidden=false; capW.hidden=false;
+    if(!capsG.length){
+      tbc.innerHTML='<tr><td colspan="5" class="empty">Sin capacitaciones registradas en el período para este gestor.</td></tr>';
+    }else{
+      const esPendR=x=>String(x.detalle||"").toUpperCase().indexOf("PENDIENTE")===0;
+      const esFormalR=x=>String(x.detalle||"").toUpperCase().indexOf("FORMAL")===0;
+      const fxr=x=>{const f=d(x);return ("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();};
+      capsG.forEach(x=>{
+        const modo=esPendR(x)?'<span class="chip warn">FUTURA</span>':esFormalR(x)?'<span class="chip ok">Planilla firmada</span>':'<span class="chip">Refuerzo en visita</span>';
+        tbc.insertAdjacentHTML("beforeend",`<tr${esPendR(x)?' style="background:var(--warn-bg)"':''}><td><b>${fxr(x.fecha)}</b></td><td><b>${esc(x.estacion)}</b></td><td style="max-width:320px">${esc(x.tema||"—")}</td><td>${esc(x.asistentes||"—")}</td><td>${modo}</td></tr>`);
+      });
+    }
+  }
+}
 function renderCapacitaciones(){
   const tb=$("tCapacitaciones")&&$("tCapacitaciones").querySelector("tbody"); if(!tb)return;
   tb.innerHTML="";
@@ -918,13 +945,23 @@ function renderCapacitaciones(){
   $("capInfo").innerHTML=`<b>${eventos.length}</b> capacitaciones dictadas`+
     (pendGestor.length?` · <span class="chip warn">${pendGestor.length} futuras del gestor</span>`:"")+
     (pendTerceros.length?` · <span class="chip" style="background:var(--lighter)">${pendTerceros.length} de otros responsables</span>`:"");
+  // TODOS los gestores de la red, también los que están en cero (matcheo sin tildes)
+  const sinAc=x=>String(x||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  Object.keys(ASIGNACIONES).forEach(g=>{
+    const k=Object.keys(stats).find(x=>sinAc(x).indexOf(sinAc(g))!==-1||sinAc(g).indexOf(sinAc(x))!==-1);
+    if(!k)stats[g]={d:0,f:0,r:0,p:0,pers:0};
+  });
+  const nG=Object.keys(stats).length;
+  const totalD=Object.values(stats).reduce((a,e)=>a+e.d,0);
+  const media=nG?totalD/nG:0;
   const tbR=$("tCapResumen").querySelector("tbody");
   tbR.innerHTML="";
   Object.entries(stats).sort((a,b)=>b[1].d-a[1].d||b[1].pers-a[1].pers).forEach(([g,e])=>{
-    tbR.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td><td>${e.d}</td><td>${e.f}</td><td>${e.r}</td><td>${e.pers||"—"}</td><td>${e.p?`<span class="chip warn">${e.p}</span>`:0}</td></tr>`);
+    const cls=e.d>media?"ok":Math.abs(e.d-media)<0.5?"warn":"crit";
+    tbR.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td><td><span class="chip ${cls}">${e.d}</span></td><td>${e.f}</td><td>${e.r}</td><td>${e.pers||"—"}</td><td>${e.p?`<span class="chip warn">${e.p}</span>`:0}</td></tr>`);
   });
   const T=Object.values(stats).reduce((a,e)=>({d:a.d+e.d,f:a.f+e.f,r:a.r+e.r,p:a.p+e.p,pers:a.pers+e.pers}),{d:0,f:0,r:0,p:0,pers:0});
-  tbR.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo</td><td>${T.d}</td><td>${T.f}</td><td>${T.r}</td><td>${T.pers||"—"}</td><td>${T.p}</td></tr>`);
+  tbR.insertAdjacentHTML("beforeend",`<tr class="total"><td>Total equipo · media ${Math.round(media*10)/10} por gestor</td><td>${T.d}</td><td>${T.f}</td><td>${T.r}</td><td>${T.pers||"—"}</td><td>${T.p}</td></tr>`);
   // ── por estación: mapear cada evento a su estación asignada ──
   const ests=listaEstaciones();
   const vecesEst={}, ultimaEst={};
@@ -937,31 +974,35 @@ function renderCapacitaciones(){
     const fi=fechaISO(e.fecha);
     if(!ultimaEst[k]||fi>ultimaEst[k])ultimaEst[k]=fi;
   });
+  const sel=$("filtroGestorCap");
+  const sinAcF=x=>String(x||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const gestoresCap=[...new Set([...Object.keys(ASIGNACIONES),...caps.map(x=>norm(x.gestor)||"S/D")])]
+    .filter((g,i,arr)=>arr.findIndex(x=>sinAcF(x).indexOf(sinAcF(g))!==-1||sinAcF(g).indexOf(sinAcF(x))!==-1)===i).sort();
+  const elegido=sel.value;
+  sel.innerHTML='<option value="">Todos los gestores</option>'+gestoresCap.map(g=>`<option value="${esc(g)}"${g===elegido?" selected":""}>${esc(g)}</option>`).join("");
+  const coincideG=x=>!sel.value||sinAcF(x).indexOf(sinAcF(sel.value))!==-1||sinAcF(sel.value).indexOf(sinAcF(x))!==-1;
   const tbE=$("tCapEst").querySelector("tbody");
   tbE.innerHTML="";
   const soloCap=$("soloCapacitadas").checked;
-  const filasEst=ests.map(x=>({n:x.nombre,div:x.div,g:x.gestores.join(", "),v:vecesEst[x.k]||0,u:ultimaEst[x.k]||""}))
+  const estsF=ests.filter(x=>coincideG(x.gestores.join(", ")));
+  const filasEst=estsF.map(x=>({n:x.nombre,div:x.div,g:x.gestores.join(", "),v:vecesEst[x.k]||0,u:ultimaEst[x.k]||""}))
     .filter(x=>!soloCap||x.v>0)
     .sort((a,b)=>b.v-a.v||a.n.localeCompare(b.n));
-  const capN=ests.filter(x=>(vecesEst[x.k]||0)>0).length;
-  $("capEstInfo").textContent=`${capN} de ${ests.length} estaciones con capacitación`;
+  const capN=estsF.filter(x=>(vecesEst[x.k]||0)>0).length;
+  $("capEstInfo").textContent=(sel.value?sel.value+": ":"")+`${capN} de ${estsF.length} estaciones con capacitación`;
   filasEst.forEach(x=>{
     const u=x.u?x.u.split("-").reverse().join("/"):"—";
     tbE.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(x.n)}</b></td><td>${esc(x.div)}</td><td>${esc(x.g)}</td><td>${x.v?'<span class="chip ok">Sí</span>':'<span class="chip crit">No</span>'}</td><td>${x.v||0}</td><td>${u}</td></tr>`);
   });
 
-  const sel=$("filtroGestorCap");
-  const gestoresCap=[...new Set(caps.map(x=>norm(x.gestor)||"S/D"))].sort();
-  const elegido=sel.value;
-  sel.innerHTML='<option value="">Todos los gestores</option>'+gestoresCap.map(g=>`<option value="${esc(g)}"${g===elegido?" selected":""}>${esc(g)}</option>`).join("");
   const fx=x=>{const f=d(x);return ("0"+f.getDate()).slice(-2)+"/"+("0"+(f.getMonth()+1)).slice(-2)+"/"+f.getFullYear();};
   // pendientes primero (individuales: cada deuda a la vista), luego los eventos por fecha desc
-  [...pendGestor,...pendTerceros].filter(x=>!sel.value||(norm(x.gestor)||"S/D")===sel.value).forEach(x=>{
+  [...pendGestor,...pendTerceros].filter(x=>coincideG(norm(x.gestor)||"S/D")).forEach(x=>{
     const r=respDe(x), propia=r==="GESTOR";
     const det=String(x.detalle).replace(/^PENDIENTE\s*(\([^)]*\))?:\s*/i,"");
     tb.insertAdjacentHTML("beforeend",`<tr style="background:${propia?"var(--warn-bg)":"var(--lighter)"}"><td>${fx(x.fecha)}</td><td><b>${esc(x.estacion)}</b></td><td>${esc(norm(x.gestor))}</td><td><span class="chip ${propia?"warn":""}">FUTURA${propia?" · a realizar por el gestor":" · debe "+esc(r)}</span> ${esc(x.tema||"—")}</td><td>—</td><td style="max-width:340px">${esc(det)}${propia?"":" <i style='color:var(--muted)'>(detección del gestor)</i>"}</td></tr>`);
   });
-  eventos.filter(e=>!sel.value||e.gestor===sel.value).sort((a,b)=>d(b.fecha)-d(a.fecha)).forEach(e=>{
+  eventos.filter(e=>coincideG(e.gestor)).sort((a,b)=>d(b.fecha)-d(a.fecha)).forEach(e=>{
     const temasHtml=e.temas.length>1?"<ul style='margin:2px 0 0;padding-left:16px'>"+e.temas.map(t=>`<li>${esc(t)}</li>`).join("")+"</ul>":esc(e.temas[0]||"—");
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${fx(e.fecha)}</b></td><td><b>${esc(e.est)}</b></td><td>${esc(e.gestor)}</td><td style="max-width:300px">${temasHtml}</td><td>${e.asist||"—"}</td><td style="max-width:280px"><span class="chip ${e.formal?"ok":""}">${e.formal?"Planilla firmada":"Refuerzo en visita"}</span></td></tr>`);
   });
