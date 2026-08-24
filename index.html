@@ -138,6 +138,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <button data-vista="cardTrimestres" class="vbtn">📆 Trimestres</button>
     <button data-vista="cardGestores" class="vbtn">👥 Gestores</button>
     <button data-vista="cardIA" class="vbtn">🤖 Análisis IA</button>
+    <button data-vista="cardCierres" class="vbtn">✅ Cierres</button>
     <button data-vista="cardDiv" class="vbtn">🗺️ Divisionales</button>
     <button data-vista="cardCorte" class="vbtn">📅 Desde el 1/7</button>
     <button data-vista="cardResultados" class="vbtn">📈 Resultados</button>
@@ -293,6 +294,16 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
       <div><canvas id="chEvol"></canvas></div>
       <div class="tablewrap" style="max-height:260px" id="evolTabla"></div>
     </div>
+  </div>
+
+  <div class="card vista" id="cardCierres" style="display:none">
+    <h2>✅ Cierres — qué se resolvió, quién y cómo</h2>
+    <div id="cierresInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
+    <div class="tablewrap"><table id="tCierres">
+      <thead><tr><th>Fecha cierre</th><th>Gestor</th><th>ID</th><th>Dependencia</th><th>Acción resuelta</th><th>Prioridad</th><th>Días abierta</th><th>Vía de cierre</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Vía de cierre: cómo quedó documentada la resolución. ⚠ sin justificación = cierre sin evidencia anotada — conviene revisarlo o completar el motivo en la planilla.</p>
   </div>
 
   <div class="card vista" id="cardIA" style="display:none">
@@ -518,7 +529,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres(); renderIA();
+  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres(); renderCierres(); renderIA();
 }
 
 function aniosConChecks(){
@@ -1323,6 +1334,26 @@ function renderEvol(){
   $("evolTabla").innerHTML=html+"</tbody></table>";
 }
 
+function renderCierres(){
+  const via=x=>{x=String(x||"").trim();
+    if(!x)return ["⚠ sin justificación","crit"];
+    if(/realizado|orden/i.test(x)&&/OBS/i.test(x))return ["Orden explícita","ok"];
+    if(/dependencia|inform|respuesta|jefe/i.test(x))return ["Informado por la dependencia","ok"];
+    if(/check|verific|constat|subsan|visita/i.test(x))return ["Verificado en check","ok"];
+    if(/\d{4}-\d{2}-\d{2}/.test(x)||/manual/i.test(x))return ["Cierre manual","warn"];
+    return [x.substring(0,50),"warn"];};
+  const cerr=(DATA.observaciones||[]).filter(o=>/cerrad/i.test(String(o.estado||"")));
+  const tb=$("tCierres").querySelector("tbody"); tb.innerHTML="";
+  $("cierresInfo").textContent=cerr.length?cerr.length+" acciones cerradas acumuladas (desde el 1/7)":"Todavía no hay acciones cerradas registradas.";
+  cerr.map(o=>{
+    const fc=o.cierre&&/\d{4}-\d{2}-\d{2}/.test(String(o.cierre))?String(o.cierre).substring(0,10):"";
+    const dias=fc&&o.fecha?Math.max(0,Math.round((new Date(fc)-new Date(String(o.fecha).substring(0,10)))/86400000)):"";
+    return {fc,dias,o};
+  }).sort((x,y)=>String(y.fc).localeCompare(String(x.fc))).forEach(({fc,dias,o})=>{
+    const [v,cls]=via(o.cierre);
+    tb.insertAdjacentHTML("beforeend",`<tr><td><b>${fc||"—"}</b></td><td><b>${esc(String(o.gestor||"").toUpperCase())}</b></td><td>${esc(o.id)}</td><td>${esc(o.estacion)}</td><td style="max-width:340px;font-size:12px">${esc(String(o.descripcion||"").substring(0,120))}</td><td>${esc(o.criticidad||"")}</td><td align="center">${dias!==""?dias:"—"}</td><td><span class="chip ${cls}">${esc(v)}</span></td></tr>`);
+  });
+}
 function renderIA(){
   const a=DATA.analisis;
   if(!a){$("iaFecha").textContent="";$("iaResumen").textContent="Todavía no hay un análisis generado (corre los domingos, o ejecutá analisisIA desde el editor).";$("iaGestores").innerHTML="";return;}
