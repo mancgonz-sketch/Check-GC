@@ -299,6 +299,11 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
   <div class="card vista" id="cardCierres" style="display:none">
     <h2>✅ Cierres — qué se resolvió, quién y cómo</h2>
     <div id="cierresInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
+    <div class="tablewrap" style="max-height:none;overflow:visible;margin-bottom:14px"><table id="tCierresResumen">
+      <thead><tr><th>Gestor</th><th>Abiertas</th><th>Vencidas</th><th>Cerradas</th><th>% resuelto</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div style="margin-bottom:10px"><b style="font-size:12.5px;margin-right:6px">Ver detalle de:</b><select id="filtroGestorCierres"><option value="">Todos los gestores</option></select></div>
     <div class="tablewrap"><table id="tCierres">
       <thead><tr><th>Fecha cierre</th><th>Gestor</th><th>ID</th><th>Dependencia</th><th>Acción resuelta</th><th>Prioridad</th><th>Días abierta</th><th>Vía de cierre</th></tr></thead>
       <tbody></tbody>
@@ -376,6 +381,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 <footer></footer>
 
 <script>
+const APP_VERSION="v51 · 24/08/2026";
 const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},d:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
@@ -471,7 +477,7 @@ async function cargar(){
       DATA={...DEMO,visitas:[],observaciones:[],reclamos:[]}; $("badgeFuente").textContent="DATOS DE EJEMPLO — sin conexión"; $("badgeFuente").className="badge demo";
     }
   }else{ DATA={...DEMO,visitas:[],observaciones:[],reclamos:[]}; $("badgeFuente").textContent="DATOS DE EJEMPLO"; $("badgeFuente").className="badge demo"; }
-  $("hActualizado").textContent="Actualizado: "+fmt(DATA.actualizado);
+  $("hActualizado").textContent="Actualizado: "+fmt(DATA.actualizado)+"  ·  "+APP_VERSION;
   $("fGer").length=1;$("fEst").length=1;$("fGestor").length=1;
   poblarFiltros(); poblarEvol(); render(); renderEvol();
 }
@@ -1342,9 +1348,36 @@ function renderCierres(){
     if(/check|verific|constat|subsan|visita/i.test(x))return ["Verificado en check","ok"];
     if(/\d{4}-\d{2}-\d{2}/.test(x)||/manual/i.test(x))return ["Cierre manual","warn"];
     return [x.substring(0,50),"warn"];};
-  const cerr=(DATA.observaciones||[]).filter(o=>/cerrad/i.test(String(o.estado||"")));
+  const sinAcC=x=>String(x||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const obsT=(DATA.observaciones||[]);
+  const cerrTodas=obsT.filter(o=>/cerrad/i.test(String(o.estado||"")));
+  const hoy0=hoy();
+  // consolidado por gestor del padrón (con los cero)
+  const stats={};
+  Object.keys(ASIGNACIONES).forEach(g=>stats[g]={ab:0,ven:0,cer:0});
+  obsT.forEach(o=>{
+    const k=Object.keys(stats).find(g=>sinAcC(o.gestor).indexOf(sinAcC(g))!==-1||sinAcC(g).indexOf(sinAcC(o.gestor))!==-1);
+    if(!k)return;
+    if(/cerrad/i.test(String(o.estado||""))){stats[k].cer++;return;}
+    stats[k].ab++;
+    const vto=o.compromiso&&/\d{4}-\d{2}-\d{2}/.test(String(o.compromiso))?new Date(String(o.compromiso).substring(0,10)):null;
+    if(vto&&vto<hoy0)stats[k].ven++;
+  });
+  const tbR=$("tCierresResumen").querySelector("tbody"); tbR.innerHTML="";
+  Object.entries(stats).sort((x,y)=>y[1].cer-x[1].cer||x[1].ab-y[1].ab).forEach(([g,e])=>{
+    const tot=e.ab+e.cer, pct=tot?Math.round(e.cer*100/tot):null;
+    const cls=pct===null?"":pct>=30?"ok":pct>=10?"warn":"crit";
+    tbR.insertAdjacentHTML("beforeend",`<tr><td><b>${esc(g)}</b></td><td align="center">${e.ab}</td><td align="center">${e.ven?`<b style="color:var(--crit)">${e.ven}</b>`:0}</td><td align="center">${e.cer?`<b style="color:#1E7A46">${e.cer}</b>`:0}</td><td align="center">${pct===null?"—":`<span class="chip ${cls}">${pct}%</span>`}</td></tr>`);
+  });
+  // filtro
+  const selC=$("filtroGestorCierres");
+  const elegidoC=selC.value;
+  selC.innerHTML='<option value="">Todos los gestores</option>'+Object.keys(stats).sort().map(g=>`<option value="${esc(g)}"${g===elegidoC?" selected":""}>${esc(g)}</option>`).join("");
+  const coincideC=x=>!selC.value||sinAcC(x).indexOf(sinAcC(selC.value))!==-1||sinAcC(selC.value).indexOf(sinAcC(x))!==-1;
+  const cerr=cerrTodas.filter(o=>coincideC(o.gestor));
   const tb=$("tCierres").querySelector("tbody"); tb.innerHTML="";
-  $("cierresInfo").textContent=cerr.length?cerr.length+" acciones cerradas acumuladas (desde el 1/7)":"Todavía no hay acciones cerradas registradas.";
+  $("cierresInfo").textContent=cerrTodas.length?cerrTodas.length+" acciones cerradas acumuladas (desde el 1/7)"+(selC.value?" · mostrando las de "+selC.value:""):"Todavía no hay acciones cerradas registradas.";
+  if(!cerr.length)tb.innerHTML='<tr><td colspan="8" class="empty">Sin cierres registrados'+(selC.value?" para "+esc(selC.value):"")+'.</td></tr>';
   cerr.map(o=>{
     const fc=o.cierre&&/\d{4}-\d{2}-\d{2}/.test(String(o.cierre))?String(o.cierre).substring(0,10):"";
     const dias=fc&&o.fecha?Math.max(0,Math.round((new Date(fc)-new Date(String(o.fecha).substring(0,10)))/86400000)):"";
@@ -1381,7 +1414,7 @@ $("lockBtn").addEventListener("click",async()=>{
     TOKEN=clave; LS.s("gc_token",clave);
     $("lockScreen").style.display="none";
     $("badgeFuente").textContent="DATOS EN VIVO"; $("badgeFuente").className="badge";
-    $("hActualizado").textContent="Actualizado: "+fmt(DATA.actualizado);
+    $("hActualizado").textContent="Actualizado: "+fmt(DATA.actualizado)+"  ·  "+APP_VERSION;
     $("fGer").length=1;$("fEst").length=1;$("fGestor").length=1;
     poblarFiltros(); poblarEvol(); render(); renderEvol();
   }catch(e){
