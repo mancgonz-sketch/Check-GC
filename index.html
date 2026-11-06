@@ -139,6 +139,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <button data-vista="cardGestores" class="vbtn">👥 Gestores</button>
     <button data-vista="cardIA" class="vbtn">🤖 Análisis IA</button>
     <button data-vista="cardCierres" class="vbtn">✅ Cierres</button>
+    <button data-vista="cardRevisitas" class="vbtn">⚖ Revisitas</button>
     <button data-vista="cardDiv" class="vbtn">🗺️ Divisionales</button>
     <button data-vista="cardCorte" class="vbtn">📅 Desde el 1/7</button>
     <button data-vista="cardResultados" class="vbtn">📈 Resultados</button>
@@ -311,6 +312,26 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Vía de cierre: cómo quedó documentada la resolución. ⚠ sin justificación = cierre sin evidencia anotada — conviene revisarlo o completar el motivo en la planilla.</p>
   </div>
 
+  <div class="card vista" id="cardRevisitas" style="display:none">
+    <h2>⚖ Revisitas — qué cambió de una visita a la otra</h2>
+    <p id="rvInfo" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></p>
+    <div class="tablewrap" style="max-height:none;overflow:visible;margin-bottom:14px"><table id="tRVGestores">
+      <thead><tr><th>Gestor</th><th>Estaciones revisitadas</th><th>Visitas</th><th>Δ prom. (pts)</th><th>Pendientes previos</th><th>Resueltos</th><th>% resolución</th><th>Arrastradas</th><th>Reiteraciones</th><th>Reaperturas</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <b style="font-size:12.5px">Gestor:</b><select id="rvGestor"><option value="">Todos</option></select>
+      <b style="font-size:12.5px">Estación:</b><select id="rvEst"><option value="">— elegir para ver el detalle —</option></select>
+      <label style="font-size:12.5px;color:var(--muted)"><input type="checkbox" id="rvSolo2" checked> Solo estaciones con 2 o más visitas</label>
+    </div>
+    <div class="tablewrap" style="max-height:340px;margin-bottom:14px"><table id="tRVEst">
+      <thead><tr><th>Estación</th><th>Gestor</th><th>Visitas (puntaje)</th><th>Δ última</th><th>Resueltos / previos</th><th>Arrastradas</th><th>Reiteradas</th><th>Reabiertas</th><th>Veredicto</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div id="rvDetalle"></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px"><b>Cómo leerlo.</b> <b>Previos</b>: acciones levantadas en visitas anteriores a la última. <b>Resueltos</b>: las que hoy figuran cerradas. <b>Arrastradas</b>: las que siguen abiertas pese a haber habido una visita posterior (no se solucionaron de una visita a la otra). <b>Reiteradas</b>: el problema volvió a aparecer en un check posterior [REINCIDENTE]. <b>Reabiertas</b>: se había dado por cerrado y reapareció [REAPARECIDA — falso cierre]. El Δ compara solo checks del mismo tipo (Estación con Estación, Bromatología con Bromatología).</p>
+  </div>
+
   <div class="card vista" id="cardIA" style="display:none">
     <h2>Análisis IA — perfiles y toma de decisiones</h2>
     <div id="iaFecha" style="font-size:11.5px;color:var(--muted);margin-bottom:8px"></div>
@@ -381,7 +402,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 <footer></footer>
 
 <script>
-const APP_VERSION="v51 · 24/08/2026";
+const APP_VERSION="v52 · 06/11/2026";
 const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},d:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
@@ -535,7 +556,7 @@ function render(){
   $("kPuntaje").textContent=conP.length?(conP.reduce((s,v)=>s+Number(v.puntaje),0)/conP.length).toFixed(1)+"%":"—";
   $("kObsVen").textContent=ov.length; $("kRecAb").textContent=ra.length;
   $("kSLA").textContent=conSLA.length?Math.round(si/conSLA.length*100)+"%":"—";
-  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres(); renderCierres(); renderIA();
+  renderGestores(); renderEstaciones(); renderResultadosGestor(); renderCapacitaciones(); renderAsignadas(); renderTrimestres(); renderCierres(); renderRevisitas(); renderIA();
 }
 
 function aniosConChecks(){
@@ -1387,6 +1408,192 @@ function renderCierres(){
     tb.insertAdjacentHTML("beforeend",`<tr><td><b>${fc||"—"}</b></td><td><b>${esc(String(o.gestor||"").toUpperCase())}</b></td><td>${esc(o.id)}</td><td>${esc(o.estacion)}</td><td style="max-width:340px;font-size:12px">${esc(String(o.descripcion||"").substring(0,120))}</td><td>${esc(o.criticidad||"")}</td><td align="center">${dias!==""?dias:"—"}</td><td><span class="chip ${cls}">${esc(v)}</span></td></tr>`);
   });
 }
+/* ⚖ REVISITAS — acumulado por estación/gestor: reiteraciones, no-soluciones, reaperturas, inconsistencias */
+let RV_LISTO=false, RV_ANA=[];
+function rvConstruir(){
+  const hoy0=hoy();
+  const cerrada=o=>/cerrad/i.test(String(o.estado||""));
+  const vencida=o=>{const f=d(o.compromiso);return !cerrada(o)&&!!f&&f<hoy0;};
+  const gKey=g=>{const n=norm(sinAcentos(g));if(!n)return"S/D";return Object.keys(ASIGNACIONES).find(k=>n.indexOf(k)>=0||k.indexOf(n)>=0)||n;};
+  const tipoDe=v=>tipoEspecial(v)||"ESTACIÓN";
+  const porEst={};
+  (DATA.visitas||[]).forEach(v=>{if(!tieneCheck(v)||!d(v.fecha))return;const k=normEst(v.estacion);(porEst[k]=porEst[k]||{vis:[],obs:[]}).vis.push(v);});
+  (DATA.observaciones||[]).forEach(o=>{const k=normEst(o.estacion);if(porEst[k])porEst[k].obs.push(o);});
+  const out=[];
+  Object.values(porEst).forEach(E=>{
+    const vis=E.vis.sort((a,b)=>d(a.fecha)-d(b.fecha)).map(v=>({v,f:d(v.fecha),p:Number(v.puntaje),t:tipoDe(v),gk:gKey(v.gestor)}));
+    vis.forEach((x,i)=>{let pr=null;for(let j=i-1;j>=0;j--)if(vis[j].t===x.t){pr=vis[j];break;}x.delta=pr?x.p-pr.p:null;x.dprev=pr?dias(pr.f,x.f):null;});
+    const obs=E.obs.slice().sort((a,b)=>d(a.fecha)-d(b.fecha));
+    obs.forEach(o=>{const fo=d(o.fecha);let idx=-1;vis.forEach((x,i)=>{if(fo&&fo>=x.f)idx=i;});o._i=idx;});
+    const last=vis.length-1, ult=vis[last];
+    const previas=obs.filter(o=>o._i>=0&&o._i<last);
+    const resueltas=previas.filter(cerrada), arrastradas=previas.filter(o=>!cerrada(o));
+    const reit=obs.filter(o=>/\[REINCIDENTE/i.test(o.descripcion||""));
+    const reap=obs.filter(o=>/\[REAPARECIDA/i.test(o.descripcion||""));
+    const sinJust=obs.filter(o=>cerrada(o)&&!String(o.cierre||"").trim());
+    const sinVerif=obs.filter(o=>{if(!cerrada(o))return false;const fc=d(o.cierre);return fc&&fc>ult.f;});
+    const pct=previas.length?Math.round(resueltas.length*100/previas.length):null;
+    const comp=vis.filter(x=>x.delta!==null);
+    const dl=comp.length?comp[comp.length-1].delta:null;
+    const tipos=[...new Set(vis.map(x=>x.t))];
+    const incons=[];
+    if(tipos.length>1)incons.push("Mezcla de checks distintos ("+tipos.join(" y ")+"): no se comparan entre sí.");
+    vis.forEach(x=>{if(x.dprev!==null&&x.dprev<7)incons.push("Dos checks "+x.t+" con solo "+x.dprev+" día(s) de diferencia (hasta "+fmt(x.v.fecha)+"): ¿reenvío o visita real?");});
+    if(dl!==null&&dl>0&&previas.length>=3&&pct!==null&&pct<20)incons.push("El puntaje subió "+dl.toFixed(2)+" pts pero solo se resolvió el "+pct+"% de lo pendiente: mejora sin respaldo en cierres.");
+    if(dl!==null&&dl<0&&pct!==null&&pct>=50)incons.push("Se resolvió el "+pct+"% de lo pendiente pero el puntaje bajó "+Math.abs(dl).toFixed(2)+" pts: aparecieron hallazgos nuevos.");
+    if(reap.length)incons.push(reap.length+" acción(es) REABIERTA(S) tras un cierre: falso cierre.");
+    if(reit.length)incons.push(reit.length+" acción(es) REITERADA(S): el mismo problema volvió a aparecer.");
+    if(sinJust.length)incons.push(sinJust.length+" cierre(s) sin justificación anotada.");
+    if(sinVerif.length)incons.push(sinVerif.length+" cierre(s) posteriores a la última visita: sin verificar en campo.");
+    vis.forEach((x,i)=>{if(x.p<95&&!obs.some(o=>o._i===i))incons.push("El check del "+fmt(x.v.fecha)+" tiene "+x.p.toFixed(2)+"% y no tiene acciones cargadas (¿llegó sin detalle?).");});
+    let ver,cls;
+    if(vis.length<2){ver="Sin revisita";cls="";}
+    else if(dl===null){ver="No comparable (tipos distintos)";cls="";}
+    else if(reap.length){ver="⚠ Con reaperturas";cls="crit";}
+    else if(dl<0){ver=reit.length?"Empeoró y reitera":"Empeoró";cls="crit";}
+    else if(dl>=1&&pct!==null&&pct>=50&&!reit.length){ver="Mejora respaldada";cls="ok";}
+    else if(dl>0&&(pct===null||pct<20)){ver="Mejoró sin resolver pendientes";cls="warn";}
+    else if(reit.length){ver="Reitera problemas";cls="warn";}
+    else if(Math.abs(dl)<1&&(pct===null||pct<20)){ver="Estancada";cls="warn";}
+    else{ver="Mixta";cls="warn";}
+    out.push({nombre:ult.v.estacion,gestor:norm(ult.v.gestor)||"S/D",gk:ult.gk,gestores:[...new Set(vis.map(x=>x.gk))],vis,obs,previas,resueltas,arrastradas,reit,reap,sinJust,sinVerif,pct,dl,incons,ver,cls,vencida,cerrada});
+  });
+  return out;
+}
+
+function renderRevisitas(){
+  RV_ANA=rvConstruir();
+  const selG=$("rvGestor"), selE=$("rvEst"), solo2=$("rvSolo2");
+  const gOpts=[...new Set([...Object.keys(ASIGNACIONES),...RV_ANA.flatMap(a=>a.gestores)])].sort();
+  const gSel=selG.value;
+  selG.innerHTML='<option value="">Todos</option>'+gOpts.map(g=>`<option value="${esc(g)}"${g===gSel?" selected":""}>${esc(g)}</option>`).join("");
+  const delGestor=a=>!selG.value||a.gestores.indexOf(selG.value)>=0;
+  const visibles=RV_ANA.filter(a=>delGestor(a)&&(!solo2.checked||a.vis.length>=2));
+  // consolidado por gestor
+  const cons={};
+  gOpts.forEach(g=>cons[g]={est:0,vis:0,dl:[],prev:0,res:0,arr:0,reit:0,reap:0});
+  RV_ANA.forEach(a=>{const c=cons[a.gk]=cons[a.gk]||{est:0,vis:0,dl:[],prev:0,res:0,arr:0,reit:0,reap:0};
+    c.vis+=a.vis.length; if(a.vis.length>=2){c.est++;c.prev+=a.previas.length;c.res+=a.resueltas.length;c.arr+=a.arrastradas.length;c.reit+=a.reit.length;c.reap+=a.reap.length;if(a.dl!==null)c.dl.push(a.dl);}});
+  const tb=$("tRVGestores").querySelector("tbody");
+  tb.innerHTML=Object.entries(cons).filter(([g,c])=>c.vis>0).sort((x,y)=>y[1].est-x[1].est||y[1].vis-x[1].vis).map(([g,c])=>{
+    const dp=c.dl.length?c.dl.reduce((s,x)=>s+x,0)/c.dl.length:null;
+    const pc=c.prev?Math.round(c.res*100/c.prev):null;
+    return `<tr data-g="${esc(g)}" style="cursor:pointer"><td><b>${esc(g)}</b></td><td align="center">${c.est}</td><td align="center">${c.vis}</td>
+      <td align="center">${dp===null?"—":`<b style="color:${dp>=0?"#1E7A46":"var(--crit)"}">${dp>0?"+":""}${dp.toFixed(2)}</b>`}</td>
+      <td align="center">${c.prev}</td><td align="center">${c.res}</td>
+      <td align="center">${pc===null?"—":`<span class="chip ${pc>=50?"ok":pc>=20?"warn":"crit"}">${pc}%</span>`}</td>
+      <td align="center">${c.arr?`<b style="color:var(--crit)">${c.arr}</b>`:0}</td>
+      <td align="center">${c.reit?`<b style="color:#B8860B">${c.reit}</b>`:0}</td>
+      <td align="center">${c.reap?`<b style="color:var(--crit)">${c.reap}</b>`:0}</td></tr>`;}).join("")||'<tr><td colspan="10" class="empty">Todavía no hay visitas con check.</td></tr>';
+  $("rvInfo").textContent=RV_ANA.filter(a=>a.vis.length>=2).length+" estación(es) con revisita sobre "+RV_ANA.length+" visitadas. Tocá un gestor o una estación para filtrar y ver el detalle.";
+  // selector de estación
+  const eSel=selE.value;
+  selE.innerHTML='<option value="">— elegir para ver el detalle —</option>'+visibles.slice().sort((x,y)=>x.nombre.localeCompare(y.nombre)).map(a=>`<option value="${esc(a.nombre)}"${a.nombre===eSel?" selected":""}>${esc(a.nombre)}</option>`).join("");
+  // tabla de estaciones
+  const tbE=$("tRVEst").querySelector("tbody");
+  tbE.innerHTML=visibles.slice().sort((x,y)=>(y.reap.length-x.reap.length)||(y.arrastradas.length-x.arrastradas.length)||x.nombre.localeCompare(y.nombre)).map(a=>{
+    const chips=a.vis.map(x=>`<span class="chip ${x.p>=95?"ok":x.p>=90?"warn":"crit"}" title="${esc(fmt(x.v.fecha)+" · "+x.t)}">${x.p.toFixed(1)}</span>`).join(" ");
+    return `<tr data-e="${esc(a.nombre)}" style="cursor:pointer"><td><b>${esc(a.nombre)}</b></td><td>${esc(a.gestor)}</td><td>${chips}</td>
+      <td align="center">${a.dl===null?"—":`<b style="color:${a.dl>=0?"#1E7A46":"var(--crit)"}">${a.dl>0?"+":""}${a.dl.toFixed(2)}</b>`}</td>
+      <td align="center">${a.resueltas.length} / ${a.previas.length}${a.pct!==null?` (${a.pct}%)`:""}</td>
+      <td align="center">${a.arrastradas.length?`<b style="color:var(--crit)">${a.arrastradas.length}</b>`:0}</td>
+      <td align="center">${a.reit.length?`<b style="color:#B8860B">${a.reit.length}</b>`:0}</td>
+      <td align="center">${a.reap.length?`<b style="color:var(--crit)">${a.reap.length}</b>`:0}</td>
+      <td><span class="chip ${a.cls}">${esc(a.ver)}</span></td></tr>`;}).join("")||'<tr><td colspan="9" class="empty">Sin estaciones para ese filtro.</td></tr>';
+  rvDetalle();
+  if(!RV_LISTO){
+    RV_LISTO=true;
+    selG.addEventListener("change",()=>{selE.value="";renderRevisitas();});
+    selE.addEventListener("change",rvDetalle);
+    solo2.addEventListener("change",renderRevisitas);
+    $("tRVGestores").addEventListener("click",e=>{const tr=e.target.closest("tr[data-g]");if(!tr)return;selG.value=tr.dataset.g;selE.value="";renderRevisitas();});
+    $("tRVEst").addEventListener("click",e=>{const tr=e.target.closest("tr[data-e]");if(!tr)return;selE.value=tr.dataset.e;rvDetalle();$("rvDetalle").scrollIntoView({behavior:"smooth",block:"start"});});
+    $("rvDetalle").addEventListener("click",e=>{
+      const b=e.target.closest("button[data-rv]");if(!b)return;
+      const a=RV_ANA.find(x=>x.nombre===$("rvEst").value);if(!a)return;
+      if(b.dataset.rv==="copiar")rvCopiar(a,b);
+      if(b.dataset.rv==="imprimir")rvImprimir(a);
+      if(b.dataset.rv==="mail")rvMail(a);
+    });
+  }
+}
+
+function rvTexto(a){
+  const L=[];
+  L.push("RESUMEN DE REVISITAS — "+a.nombre);
+  L.push("Gestor: "+a.gestor+" · Visitas con check: "+a.vis.length+" · Generado el "+fmt(new Date()));
+  L.push("");
+  L.push("RESULTADOS");
+  a.vis.forEach(x=>L.push("• "+fmt(x.v.fecha)+" ("+x.t+"): "+x.p.toFixed(2)+"%"+(x.delta!==null?" ("+(x.delta>0?"+":"")+x.delta.toFixed(2)+" pts vs. el check "+x.t+" anterior)":"")));
+  L.push("");
+  L.push("SEGUIMIENTO DE ACCIONES");
+  L.push("• Acciones de visitas anteriores: "+a.previas.length+" — resueltas: "+a.resueltas.length+(a.pct!==null?" ("+a.pct+"%)":"")+" — sin solucionar de una visita a la otra: "+a.arrastradas.length);
+  L.push("• Problemas que volvieron a aparecer (reiteradas): "+a.reit.length+" · Cerradas que reaparecieron (falso cierre): "+a.reap.length);
+  L.push("• Veredicto: "+a.ver);
+  if(a.arrastradas.length){
+    L.push("");
+    L.push("PENDIENTES QUE SIGUEN ABIERTOS (los más críticos primero)");
+    const pr={Alta:0,Media:1,Baja:2};
+    a.arrastradas.slice().sort((x,y)=>(pr[x.criticidad]??3)-(pr[y.criticidad]??3)).slice(0,10).forEach(o=>L.push("• ["+(o.criticidad||"s/p")+"] "+String(o.descripcion||"").replace(/\[(REINCIDENTE|REAPARECIDA)[^\]]*\]\s*/g,"").substring(0,140)+(a.vencida(o)?" — VENCIDA (compromiso "+fmt(o.compromiso)+")":"")));
+    if(a.arrastradas.length>10)L.push("• … y "+(a.arrastradas.length-10)+" más.");
+  }
+  if(a.incons.length){L.push("");L.push("PUNTOS A REVISAR");a.incons.forEach(t=>L.push("• "+t));}
+  L.push("");
+  L.push("Recordatorio: las acciones se cierran únicamente verificándolas en el siguiente check.");
+  return L.join("\n");
+}
+function rvCopiar(a,btn){
+  const t=rvTexto(a);
+  const ok=()=>{const o=btn.textContent;btn.textContent="✔ Copiado";setTimeout(()=>btn.textContent=o,1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,()=>{prompt("Copiá el texto (Ctrl+C):",t);});}
+  else{prompt("Copiá el texto (Ctrl+C):",t);}
+}
+function rvMail(a){
+  const t=rvTexto(a);
+  location.href="mailto:?subject="+encodeURIComponent("Revisitas — "+a.nombre)+"&body="+encodeURIComponent(t.length>1700?t.substring(0,1700)+"\n[…recortado: usá 📋 Copiar resumen para el texto completo]":t);
+}
+function rvImprimir(a){
+  const w=window.open("","_blank"); if(!w){alert("El navegador bloqueó la ventana. Permití ventanas emergentes para este sitio.");return;}
+  const filas=a.vis.map(x=>`<tr><td>${esc(fmt(x.v.fecha))}</td><td>${esc(x.t)}</td><td><b>${x.p.toFixed(2)}%</b></td><td>${x.delta===null?"—":(x.delta>0?"+":"")+x.delta.toFixed(2)}</td><td>${a.obs.filter(o=>o._i===a.vis.indexOf(x)).length}</td></tr>`).join("");
+  const pend=a.arrastradas.map(o=>`<tr><td>${esc(o.id)}</td><td>${esc(o.criticidad||"")}</td><td>${esc(String(o.descripcion||"").substring(0,160))}</td><td>${esc(fmt(o.compromiso))}</td></tr>`).join("");
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Revisitas — ${esc(a.nombre)}</title><style>body{font-family:Calibri,Arial,sans-serif;color:#22303F;margin:28px;font-size:13px}h1{font-size:19px;color:#1F3864;margin:0 0 4px}h2{font-size:14px;color:#1F3864;margin:18px 0 6px;border-bottom:1px solid #C9D4E4;padding-bottom:3px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #D5DDEA;padding:5px 8px;text-align:left;font-size:12px}th{background:#F3F5F8}li{margin:3px 0}.k{display:inline-block;background:#EEF4FB;border-radius:6px;padding:4px 10px;margin:0 6px 6px 0}</style></head><body>
+  <h1>Revisitas — ${esc(a.nombre)}</h1><div>Gestor: <b>${esc(a.gestor)}</b> · Generado el ${esc(fmt(new Date()))} · Veredicto: <b>${esc(a.ver)}</b></div>
+  <h2>Resultados de los checks</h2><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Puntaje</th><th>Δ vs. anterior (mismo tipo)</th><th>Acciones levantadas</th></tr></thead><tbody>${filas}</tbody></table>
+  <h2>Seguimiento de acciones</h2><div><span class="k">Previas: <b>${a.previas.length}</b></span><span class="k">Resueltas: <b>${a.resueltas.length}</b>${a.pct!==null?" ("+a.pct+"%)":""}</span><span class="k">Sin solucionar: <b>${a.arrastradas.length}</b></span><span class="k">Reiteradas: <b>${a.reit.length}</b></span><span class="k">Reabiertas: <b>${a.reap.length}</b></span></div>
+  ${a.arrastradas.length?`<h2>Pendientes que siguen abiertos</h2><table><thead><tr><th>ID</th><th>Prioridad</th><th>Acción</th><th>Compromiso</th></tr></thead><tbody>${pend}</tbody></table>`:""}
+  ${a.incons.length?`<h2>Puntos a revisar</h2><ul>${a.incons.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+  <p style="margin-top:22px;font-size:11px;color:#6B7A8C">Las acciones se cierran únicamente verificándolas en el siguiente check.</p></body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),350);
+}
+
+function rvDetalle(){
+  const box=$("rvDetalle"); const a=RV_ANA.find(x=>x.nombre===$("rvEst").value);
+  if(!a){box.innerHTML="";return;}
+  const tl=a.vis.map((x,i)=>{
+    const lev=a.obs.filter(o=>o._i===i), ce=lev.filter(a.cerrada).length;
+    return `<tr><td><b>${esc(fmt(x.v.fecha))}</b></td><td>${esc(x.t)}</td><td><span class="chip ${x.p>=95?"ok":x.p>=90?"warn":"crit"}">${x.p.toFixed(2)}%</span></td>
+      <td align="center">${x.delta===null?"—":`<b style="color:${x.delta>=0?"#1E7A46":"var(--crit)"}">${x.delta>0?"+":""}${x.delta.toFixed(2)}</b>`}</td>
+      <td align="center">${lev.length}</td><td align="center">${ce}</td><td align="center">${lev.length-ce}</td></tr>`;}).join("");
+  const fl=o=>(/\[REAPARECIDA/i.test(o.descripcion||"")?'<span class="chip crit">REABIERTA</span> ':"")+(/\[REINCIDENTE/i.test(o.descripcion||"")?'<span class="chip warn">REITERADA</span> ':"")+(a.vencida(o)?'<span class="chip crit">VENCIDA</span>':"");
+  const origen=o=>o._i>=0?fmt(a.vis[o._i].v.fecha):"—";
+  const arr=a.arrastradas.slice().sort((x,y)=>d(x.fecha)-d(y.fecha)).map(o=>`<tr><td>${esc(o.id)}</td><td>${esc(origen(o))}</td><td style="max-width:360px;font-size:12px">${esc(String(o.descripcion||"").substring(0,150))}</td><td>${esc(o.criticidad||"")}</td><td>${esc(fmt(o.compromiso))}</td><td>${fl(o)}</td></tr>`).join("");
+  const rr=[...a.reit,...a.reap.filter(o=>a.reit.indexOf(o)<0)].map(o=>`<tr><td>${esc(o.id)}</td><td>${esc(fmt(o.fecha))}</td><td style="max-width:420px;font-size:12px">${esc(String(o.descripcion||"").substring(0,170))}</td><td>${fl(o)}</td></tr>`).join("");
+  box.innerHTML=`<div style="border:1px solid #D5DDEA;border-radius:10px;padding:14px;background:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div><b style="font-size:15px;color:var(--navy)">${esc(a.nombre)}</b> · ${esc(a.gestor)} · <span class="chip ${a.cls}">${esc(a.ver)}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button data-rv="copiar" style="padding:7px 12px;border:1px solid var(--navy2);background:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:12.5px">📋 Copiar resumen</button>
+        <button data-rv="imprimir" style="padding:7px 12px;border:1px solid var(--navy2);background:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:12.5px">🖨 Imprimir / PDF</button>
+        <button data-rv="mail" style="padding:7px 12px;border:none;background:var(--navy);color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:12.5px">✉ Abrir en email</button>
+      </div></div>
+    <div class="tablewrap" style="max-height:none;overflow:visible;margin-bottom:12px"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Puntaje</th><th>Δ vs. anterior</th><th>Acciones levantadas</th><th>Hoy cerradas</th><th>Hoy abiertas</th></tr></thead><tbody>${tl}</tbody></table></div>
+    ${a.incons.length?`<div style="padding:10px 14px;background:#FFF8E6;border-left:4px solid #B8860B;border-radius:6px;margin-bottom:12px;font-size:12.5px;line-height:1.6"><b>⚠ Puntos a revisar</b><ul style="margin:6px 0 0 18px">${a.incons.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`:`<div style="padding:10px 14px;background:#EAF6EE;border-left:4px solid #1E7A46;border-radius:6px;margin-bottom:12px;font-size:12.5px">✔ Sin inconsistencias detectadas.</div>`}
+    ${arr?`<b style="font-size:12.5px">Acciones sin solucionar de una visita a la otra (${a.arrastradas.length})</b><div class="tablewrap" style="max-height:300px;margin:6px 0 12px"><table><thead><tr><th>ID</th><th>Visita de origen</th><th>Acción</th><th>Prioridad</th><th>Compromiso</th><th></th></tr></thead><tbody>${arr}</tbody></table></div>`:""}
+    ${rr?`<b style="font-size:12.5px">Reiteradas y reabiertas</b><div class="tablewrap" style="max-height:240px;margin-top:6px"><table><thead><tr><th>ID</th><th>Fecha</th><th>Acción</th><th></th></tr></thead><tbody>${rr}</tbody></table></div>`:""}
+    <p style="font-size:11.5px;color:var(--muted);margin-top:10px">El botón ✉ abre tu programa de correo con el resumen y <b>sin destinatario</b>: elegís vos a quién se lo mandás (jefe de dependencia, gestor, jefatura).</p>
+  </div>`;
+}
+
 function renderIA(){
   const a=DATA.analisis;
   if(!a){$("iaFecha").textContent="";$("iaResumen").textContent="Todavía no hay un análisis generado (corre los domingos, o ejecutá analisisIA desde el editor).";$("iaGestores").innerHTML="";return;}
