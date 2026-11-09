@@ -402,7 +402,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 <footer></footer>
 
 <script>
-const APP_VERSION="v52 · 06/11/2026";
+const APP_VERSION="v53 · 08/11/2026";
 const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},d:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 /* ================= CONFIG =================
    Pegá acá la URL del Web App de Apps Script (Implementar → Aplicación web → URL /exec)
@@ -1366,6 +1366,7 @@ function renderCierres(){
     if(!x)return ["⚠ sin justificación","crit"];
     if(/realizado|orden/i.test(x)&&/OBS/i.test(x))return ["Orden explícita","ok"];
     if(/dependencia|inform|respuesta|jefe/i.test(x))return ["Informado por la dependencia","ok"];
+    if(/no reaparece/i.test(x))return ["Verificado: no reaparece en check completo","ok"];
     if(/check|verific|constat|subsan|visita/i.test(x))return ["Verificado en check","ok"];
     if(/\d{4}-\d{2}-\d{2}/.test(x)||/manual/i.test(x))return ["Cierre manual","warn"];
     return [x.substring(0,50),"warn"];};
